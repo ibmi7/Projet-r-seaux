@@ -8,7 +8,7 @@
 #include <string.h>
 #include "client.h"
 #define MAXPENDING 5    /* Max connection requests */
-#define BUFFSIZE 32
+#define BUFFSIZE 1000
 void Die(char *mess) { perror(mess); exit(EXIT_FAILURE); }
 
 Client liste_clients[2];
@@ -29,23 +29,156 @@ void HandleClient(int sock) {
     while (received > 0) {
         //on verifie quelle operation
         if (!strcmp("AJOUT", requete)) {
-            //récupération id_client et password
+            //récupération id_client
             client = strtok(NULL, " ");
-            compte = strtok(NULL, " ")[0] - 48;
+            if (!client) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                Die("Identifiant invalide.");
+            }
+            compte = strtol(strtok(NULL, " "), NULL, 10);
+
+            //récuparation numéro de compte
+            if (!compte) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                Die("Numéro de compte invalide.");
+            }
+
+            //récupération password
             password = strtok(NULL, " ");
+            if (!password) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                Die("Mot de passe invalide.");
+            }
+
+            //on vérifie que le client est bien dans la base de donnée
             int i = 0;
-            while (strcmp(liste_clients[i].id_client, client) && i<2) i++;
-            if (i >= 2) Die("ID client non trouvé");
-            if (strcmp(liste_clients[i].password, password)) Die("Le mdp ne correspond pas");
+            while (strcmp(liste_clients[i].id_client, client) && i < 2) i++;
+            if (i >= 2) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    Die("Failed to receive additional bytes from client");
+                }
+                //Die("Pas d'identifiant / mauvais identifiant");
+            }
+
+            //on vérifie que le mdp correspond bien
+            if (strcmp(liste_clients[i].password, password)) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    Die("Failed to receive additional bytes from client");
+                }
+                //Die("Pas de mdp / mauvais mdp");
+            }
+
+            //on récupère la somme à ajouter et on vérifie que le numéro de compte est valide
             int somme = strtol(strtok(NULL, " "), NULL, 10);
-            liste_clients[i].compte[compte] = somme;
+            if (compte < 0 || compte >5) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    Die("Failed to receive additional bytes from client");
+                }
+                //Die("Pas de numéro de compte / mauvais numéro de compte");
+            }
+            liste_clients[i].compte[compte] += somme;
+
+            printf("%d %d %d\n", compte, liste_clients[i].compte[compte], somme);
             if (send(sock, "OK", received, 0) != received) {
                 Die("Failed to send bytes to client");
             }
-            //on trouve le client dans la base et on verifie que c'est le bon password
+            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                Die("Failed to receive additional bytes from client");
+            }
         }
-        else if (!strcmp("RETRAIT", requete)) {
 
+        else if (!strcmp("RETRAIT", requete)) {
+            //récupération id_client
+            client = strtok(NULL, " ");
+            if (!client) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    Die("Failed to receive additional bytes from client");
+                }
+                Die("Identifiant invalide.");
+            }
+
+            //récupération numéro de compte
+            compte = strtok(NULL, " ")[0] - 48;
+            if (!compte) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    Die("Failed to receive additional bytes from client");
+                }
+                Die("Numéro de compte invalide.");
+            }
+
+            //récupération mot de passe
+            password = strtok(NULL, " ");
+            if (!password) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    Die("Failed to receive additional bytes from client");
+                }
+                Die("Mot de passe invalide.");
+            }
+            int i = 0;
+
+            //on vérifie que le client est bien dans la base de donnée
+            while (strcmp(liste_clients[i].id_client, client) && i < 2) i++;
+            if (i >= 2) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    Die("Failed to receive additional bytes from client");
+                }
+                //Die("Pas d'identifiant / mauvais identifiant");
+            }
+            //on vérifie que le mdp correspond bien
+            if (strcmp(liste_clients[i].password, password)) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    Die("Failed to receive additional bytes from client");
+                }
+                //Die("Pas de mdp / mauvais mdp");
+            }
+
+            //on récupère la somme à retirer et on vérifie que le numéro de compte est valide
+            int somme = strtol(strtok(NULL, " "), NULL, 10);
+            if (compte < 0 || compte >5) {
+                if (send(sock, "KO", received, 0) != received) {
+                    Die("Failed to send bytes to client");
+                }
+                //Die("Pas de numéro de compte / mauvais numéro de compte");
+            }
+            liste_clients[i].compte[compte] -= somme;
+            printf("%d %d", liste_clients[i].compte[compte], somme);
+            if (send(sock, "OK", received, 0) != received) {
+                Die("Failed to send bytes to client");
+            }
+            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                Die("Failed to receive additional bytes from client");
+            }
+            //on trouve le client dans la base et on verifie que c'est le bon password
         }
         else if (!strcmp("SOLDE", requete)) {
 
@@ -54,13 +187,13 @@ void HandleClient(int sock) {
 
         }
         /* Send back received data */
-        if (send(sock, buffer, received, 0) != received) {
+        /*if (send(sock, buffer, received, 0) != received) {
         Die("Failed to send bytes to client");
         }
-        /* Check for more data */
+       //Check for more data
         if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
         Die("Failed to receive additional bytes from client");
-        }
+        }*/
     }
     close(sock);
 }
@@ -73,7 +206,10 @@ int main(int argc, char *argv[]) {
     liste_clients[1].password = "qwerty";
     int serversock, clientsock;
     struct sockaddr_in echoserver, echoclient;
-
+    for (int i = 0; i < 5; i++) {
+        liste_clients[0].compte[i] = 1000;
+        liste_clients[1].compte[i] = 1000;
+    }
     if (argc != 2) {
         fprintf(stderr, "USAGE: echoserver <port>\n");
         exit(EXIT_FAILURE);
