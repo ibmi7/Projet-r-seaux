@@ -1,8 +1,23 @@
 #include <stdlib.h>
+
+typedef struct {
+	char type[20];
+	int montant;
+	char time[100];
+}Operation;
+
+typedef struct {
+	int montant;
+	Operation liste[10];
+}Compte;
+
+
 typedef struct{
 	char *id_client;
 	char *password;
-	int compte[5];
-	char *operations[10];
+	Compte compte[5];
 }Client;
+
+
+
 
