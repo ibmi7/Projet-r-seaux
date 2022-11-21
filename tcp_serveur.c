@@ -27,16 +27,18 @@ void HandleClient(int sock) {
     if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
         Die("Failed to receive initial bytes from client");
     }
-    char*requete;
-    char*client;
-    char*password;
-    int compte;
+    char*requete = NULL;
+    char*client = NULL;
+    char*password = NULL;
+    char* pend = NULL;
+    int compte = -1;
     requete = strtok(buffer, " ");
     /* Send bytes and check for more incoming data in loop */
     while (received > 0) {
         //récupération id_client
         client = strtok(NULL, " ");
         if (!client) {
+            fprintf(stderr, "id\n");
             if (send(sock, "KO", received, 0) != received) {
                 Die("Failed to send bytes to client");
             }
@@ -44,8 +46,18 @@ void HandleClient(int sock) {
         }
 
         //récupération numéro de compte
-        compte = strtok(NULL, " ")[0] - 48;
-        if (compte == 0L) {
+        char* temp = strtok(NULL, " ");
+        if (temp) compte = strtol(temp, NULL, 10);
+        else {
+            if (send(sock, "KO", received, 0) != received) {
+                Die("Failed to send bytes to client");
+            }
+            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                Die("Failed to receive additional bytes from client");
+            }
+        }
+        if (compte<0 || compte >5) {
+            fprintf(stderr, "compte\n");
             if (send(sock, "KO", received, 0) != received) {
                 Die("Failed to send bytes to client");
             }
@@ -58,6 +70,7 @@ void HandleClient(int sock) {
         //récupération mot de passe
         password = strtok(NULL, " ");
         if (!password) {
+            fprintf(stderr, "compte\n");
             if (send(sock, "KO", received, 0) != received) {
                 Die("Failed to send bytes to client");
             }
@@ -95,15 +108,16 @@ void HandleClient(int sock) {
         if (!strcmp("AJOUT", requete)) {
 
             //on récupère la somme à ajouter et on vérifie que le numéro de compte est valide
-            int somme = strtol(strtok(NULL, " "), NULL, 10);
-            if (compte < 0 || compte >5) {
+            temp = strtok(NULL, " ");
+            int somme = 0;
+            if (temp) somme = strtol(temp, &pend, 10);
+            else {
                 if (send(sock, "KO", received, 0) != received) {
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
                     Die("Failed to receive additional bytes from client");
                 }
-                //Die("Pas de numéro de compte / mauvais numéro de compte");
             }
             liste_clients[i].compte[compte].montant += somme;
 
@@ -132,12 +146,16 @@ void HandleClient(int sock) {
         else if (!strcmp("RETRAIT", requete)) {
 
             //on récupère la somme à retirer et on vérifie que le numéro de compte est valide
-            int somme = strtol(strtok(NULL, " "), NULL, 10);
-            if (compte < 0 || compte >5) {
+            temp = strtok(NULL, " ");
+            int somme = 0;
+            if (temp) somme = strtol(temp, &pend, 10);
+            else {
                 if (send(sock, "KO", received, 0) != received) {
                     Die("Failed to send bytes to client");
                 }
-                //Die("Pas de numéro de compte / mauvais numéro de compte");
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    Die("Failed to receive additional bytes from client");
+                }
             }
             liste_clients[i].compte[compte].montant -= somme;
 
