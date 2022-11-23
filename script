@@ -1,0 +1,31 @@
+# Récupérer l'adresse IP de la machine Linux WSL
+$remoteport = bash.exe -c "ifconfig eth0 | grep 'inet '"
+$found = $remoteport -match '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}';
+
+if( $found ){
+  $remoteport = $matches[0];
+} else{
+  echo "Le script va se fermer car l'adresse IP de la machine WSL 2 est introuvable.";
+  exit;
+}
+
+# Tous les ports forwarder vers votre machine WSL 2
+$ports=@(80,443,3390);
+
+# Adresse IP sur laquelle écouter au niveau de la machine Windows 10
+$addr='0.0.0.0';
+$ports_a = $ports -join ",";
+
+# Supprimer la règle de pare-feu "WSL 2 Firewall Unlock"
+iex "Remove-NetFireWallRule -DisplayName 'WSL 2 Firewall Unlock' ";
+
+# Créer les règles de pare-feu (flux entrant et sortant) avec chacun des ports de $ports
+iex "New-NetFireWallRule -DisplayName 'WSL 2 Firewall Unlock' -Direction Outbound -LocalPort $ports_a -Action Allow -Protocol TCP";
+iex "New-NetFireWallRule -DisplayName 'WSL 2 Firewall Unlock' -Direction Inbound -LocalPort $ports_a -Action Allow -Protocol TCP";
+
+# Créer les règles de redirection de ports pour chacun des ports ($ports)
+for( $i = 0; $i -lt $ports.length; $i++ ){
+  $port = $ports[$i];
+  iex "netsh interface portproxy delete v4tov4 listenport=$port listenaddress=$addr";
+  iex "netsh interface portproxy add v4tov4 listenport=$port listenaddress=$addr connectport=$port connectaddress=$remoteport";
+}

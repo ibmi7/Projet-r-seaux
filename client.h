@@ -15,7 +15,7 @@ typedef struct {
 typedef struct{
 	char *id_client;
 	char *password;
-	Compte compte[5];
+	Compte*compte;
 }Client;
 
 

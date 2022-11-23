@@ -17,8 +17,8 @@ struct tm* timeinfo;
 
 void Die(char *mess) { perror(mess); exit(EXIT_FAILURE); }
 
-Client liste_clients[2];
-char liste_operations[5][10][BUFFSIZE];
+Client liste_clients[100];
+int nb_clients = 0;
 int op[5] = {0,0,0,0,0};
 void HandleClient(int sock) {
     char buffer[BUFFSIZE];
@@ -32,17 +32,24 @@ void HandleClient(int sock) {
     char*password = NULL;
     char* pend = NULL;
     int compte = -1;
-    requete = strtok(buffer, " ");
     /* Send bytes and check for more incoming data in loop */
     while (received > 0) {
+        FILE* bdd_clients = fopen("bdd_clients.csv", "a");
+        //récupération requête
+        requete = strtok(buffer, " ");
         //récupération id_client
         client = strtok(NULL, " ");
         if (!client) {
+            fclose(bdd_clients);
             fprintf(stderr, "id\n");
             if (send(sock, "KO", received, 0) != received) {
+                fclose(bdd_clients);
                 Die("Failed to send bytes to client");
             }
-            Die("Identifiant invalide.");
+            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                fclose(bdd_clients);
+                Die("Failed to receive additional bytes from client");
+            }
         }
 
         //récupération numéro de compte
@@ -50,193 +57,253 @@ void HandleClient(int sock) {
         if (temp) compte = strtol(temp, NULL, 10);
         else {
             if (send(sock, "KO", received, 0) != received) {
+                fclose(bdd_clients);
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                fclose(bdd_clients);
                 Die("Failed to receive additional bytes from client");
             }
+            continue;
         }
         if (compte<0 || compte >5) {
-            fprintf(stderr, "compte\n");
             if (send(sock, "KO", received, 0) != received) {
+                fclose(bdd_clients);
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                fclose(bdd_clients);
                 Die("Failed to receive additional bytes from client");
             }
-            Die("Numéro de compte invalide.");
+            continue;
         }
 
         //récupération mot de passe
         password = strtok(NULL, " ");
         if (!password) {
-            fprintf(stderr, "compte\n");
             if (send(sock, "KO", received, 0) != received) {
+                fclose(bdd_clients);
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                fclose(bdd_clients);
                 Die("Failed to receive additional bytes from client");
             }
-            Die("Mot de passe invalide.");
+            continue;
         }
 
         int i = 0;
-        //on vérifie que le client est bien dans la base de donnée
-        while (strcmp(liste_clients[i].id_client, client) && i < 2) i++;
-        if (i >= 2) {
-            if (send(sock, "KO", received, 0) != received) {
+
+        if (!strcmp("NEW", requete)) {
+            fprintf(stderr,"%d",fprintf(bdd_clients, "\n%s,%d,%s,{", client, compte, password));
+            fprintf(stderr, "\n%s,%d,%s,{", client, compte, password);
+            for (int j = 0; j < compte - 1; j++) fprintf(bdd_clients, "0,");
+            fprintf(bdd_clients, "0}");
+            if (send(sock, "OK", received, 0) != received) {
+                fclose(bdd_clients);
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                fclose(bdd_clients);
                 Die("Failed to receive additional bytes from client");
             }
-            //Die("Pas d'identifiant / mauvais identifiant");
-        }
-        //on vérifie que le mdp correspond bien
-        if (strcmp(liste_clients[i].password, password)) {
-            if (send(sock, "KO", received, 0) != received) {
-                Die("Failed to send bytes to client");
-            }
-            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                Die("Failed to receive additional bytes from client");
-            }
-            //Die("Pas de mdp / mauvais mdp");
+            continue;
         }
 
-
-        //on verifie quelle operation
-        if (!strcmp("AJOUT", requete)) {
-
-            //on récupère la somme à ajouter et on vérifie que le numéro de compte est valide
-            temp = strtok(NULL, " ");
-            int somme = 0;
-            if (temp) somme = strtol(temp, &pend, 10);
-            else {
+        else {
+            //on vérifie que le client est bien dans la base de donnée
+            while (i < nb_clients && strcmp(liste_clients[i].id_client, client)) i++;
+            if (i >= nb_clients) {
                 if (send(sock, "KO", received, 0) != received) {
+                    fclose(bdd_clients);
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fclose(bdd_clients);
                     Die("Failed to receive additional bytes from client");
                 }
-            }
-            liste_clients[i].compte[compte].montant += somme;
-
-            //on met à jour la liste des opérations
-            time(&rawtime);
-            timeinfo = localtime(&rawtime);
-            if (op[compte] == 10) { //si on atteint la fin du tableau, on supprime le premier élement et on réarrange pour être trié
-                op[compte] = 9;
-                for (int j = 0; j < 10 - 1; j++) liste_clients[i].compte[compte].liste[j] = liste_clients[i].compte[compte].liste[j + 1];
+                continue;
             }
 
-            sprintf(liste_clients[i].compte[compte].liste[op[compte]].type, "Ajout");
-            liste_clients[i].compte[compte].liste[op[compte]].montant = somme;
-            sprintf(liste_clients[i].compte[compte].liste[op[compte]].time, "%s", asctime(timeinfo));
-            liste_clients[i].compte[compte].liste[op[compte]].time[strlen(liste_clients[i].compte[compte].liste[op[compte]].time) - 1] = '\0'; //pour enlever le newline
-            op[compte]++;
-
-            if (send(sock, "OK", received, 0) != received) {
-                Die("Failed to send bytes to client");
-            }
-            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                Die("Failed to receive additional bytes from client");
-            }
-        }
-
-        else if (!strcmp("RETRAIT", requete)) {
-
-            //on récupère la somme à retirer et on vérifie que le numéro de compte est valide
-            temp = strtok(NULL, " ");
-            int somme = 0;
-            if (temp) somme = strtol(temp, &pend, 10);
-            else {
+            //on vérifie que le mdp correspond bien
+            if (strcmp(liste_clients[i].password, password)) {
                 if (send(sock, "KO", received, 0) != received) {
+                    fclose(bdd_clients);
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fclose(bdd_clients);
                     Die("Failed to receive additional bytes from client");
                 }
             }
-            liste_clients[i].compte[compte].montant -= somme;
 
-            //on met à jour la liste des opérations
 
-            if (op[compte] == 10) { //si on atteint la fin du tableau, on supprime le premier élement et on réarrange pour être trié
-                op[compte] = 9;
-                for (int j = 0; j < 10 - 1; j++) liste_clients[i].compte[compte].liste[j] = liste_clients[i].compte[compte].liste[j + 1];
-            }            
-            time(&rawtime);
-            timeinfo = localtime(&rawtime);
-            sprintf(liste_clients[i].compte[compte].liste[op[compte]].type, "Retrait");
-            liste_clients[i].compte[compte].liste[op[compte]].montant = somme;
-            sprintf(liste_clients[i].compte[compte].liste[op[compte]].time, "%s", asctime(timeinfo));
-            liste_clients[i].compte[compte].liste[op[compte]].time[strlen(liste_clients[i].compte[compte].liste[op[compte]].time) - 1] = '\0'; //pour enlever le newline
-            op[compte]++;
+            //on verifie quelle operation
+            if (!strcmp("AJOUT", requete)) {
 
-            if (send(sock, "OK", received, 0) != received) {
-                Die("Failed to send bytes to client");
+                //on récupère la somme à ajouter et on vérifie que le numéro de compte est valide
+                temp = strtok(NULL, " ");
+                int somme = 0;
+                if (temp) somme = strtol(temp, &pend, 10);
+                else {
+                    if (send(sock, "KO", received, 0) != received) {
+                        fclose(bdd_clients);
+                        Die("Failed to send bytes to client");
+                    }
+                    if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                        fclose(bdd_clients);
+                        Die("Failed to receive additional bytes from client");
+                    }
+                }
+                liste_clients[i].compte[compte].montant += somme;
+
+                //on met à jour la liste des opérations
+                time(&rawtime);
+                timeinfo = localtime(&rawtime);
+                if (op[compte] == 10) { //si on atteint la fin du tableau, on supprime le premier élement et on réarrange pour être trié
+                    op[compte] = 9;
+                    for (int j = 0; j < 10 - 1; j++) liste_clients[i].compte[compte].liste[j] = liste_clients[i].compte[compte].liste[j + 1];
+                }
+
+                sprintf(liste_clients[i].compte[compte].liste[op[compte]].type, "Ajout");
+                liste_clients[i].compte[compte].liste[op[compte]].montant = somme;
+                sprintf(liste_clients[i].compte[compte].liste[op[compte]].time, "%s", asctime(timeinfo));
+                liste_clients[i].compte[compte].liste[op[compte]].time[strlen(liste_clients[i].compte[compte].liste[op[compte]].time) - 1] = '\0'; //pour enlever le newline
+                op[compte]++;
+
+                if (send(sock, "OK", received, 0) != received) {
+                    fclose(bdd_clients);
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fclose(bdd_clients);
+                    Die("Failed to receive additional bytes from client");
+                }
             }
+
+            else if (!strcmp("RETRAIT", requete)) {
+
+                //on récupère la somme à retirer et on vérifie que le numéro de compte est valide
+                temp = strtok(NULL, " ");
+                int somme = 0;
+                if (temp) somme = strtol(temp, &pend, 10);
+                else {
+                    if (send(sock, "KO", received, 0) != received) {
+                        fclose(bdd_clients);
+                        Die("Failed to send bytes to client");
+                    }
+                    if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                        fclose(bdd_clients);
+                        Die("Failed to receive additional bytes from client");
+                    }
+                }
+                liste_clients[i].compte[compte].montant -= somme;
+
+                //on met à jour la liste des opérations
+
+                if (op[compte] == 10) { //si on atteint la fin du tableau, on supprime le premier élement et on réarrange pour être trié
+                    op[compte] = 9;
+                    for (int j = 0; j < 10 - 1; j++) liste_clients[i].compte[compte].liste[j] = liste_clients[i].compte[compte].liste[j + 1];
+                }
+                time(&rawtime);
+                timeinfo = localtime(&rawtime);
+                sprintf(liste_clients[i].compte[compte].liste[op[compte]].type, "Retrait");
+                liste_clients[i].compte[compte].liste[op[compte]].montant = somme;
+                sprintf(liste_clients[i].compte[compte].liste[op[compte]].time, "%s", asctime(timeinfo));
+                liste_clients[i].compte[compte].liste[op[compte]].time[strlen(liste_clients[i].compte[compte].liste[op[compte]].time) - 1] = '\0'; //pour enlever le newline
+                op[compte]++;
+
+                if (send(sock, "OK", received, 0) != received) {
+                    fclose(bdd_clients);
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fclose(bdd_clients);
+                    Die("Failed to receive additional bytes from client");
+                }
+                //on trouve le client dans la base et on verifie que c'est le bon password
+            }
+
+            else if (!strcmp("SOLDE", requete)) {
+                char solde[200];
+                if (strcmp(liste_clients[i].compte[compte].liste[op[compte] - 1].time, "")) sprintf(solde, "RES_SOLDE %d %s\n", liste_clients[i].compte[compte].montant, liste_clients[i].compte[compte].liste[op[compte] - 1].time);
+                else sprintf(solde, "RES_SOLDE %d Aucune opération sur ce compte.", liste_clients[i].compte[compte].montant);
+                if (send(sock, solde, 200, 0) != 200) {
+                    fclose(bdd_clients);
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fclose(bdd_clients);
+                    Die("Failed to receive additional bytes from client");
+                }
+
+            }
+
+            else if (!strcmp("OPERATIONS", requete)) {
+                char temp[BUFFSIZE];
+                char message[BUFFSIZE];
+                sprintf(message, "RES_OPERATIONS\n");
+                int j = 0;
+                while (strcmp(liste_clients[i].compte[compte].liste[j].type, "")) {
+                    sprintf(temp, "%s %s %d\n", liste_clients[i].compte[compte].liste[j].type, liste_clients[i].compte[compte].liste[j].time, liste_clients[i].compte[compte].liste[j].montant);
+                    strcat(message, temp);
+                    j++;
+                }
+                if (send(sock, message, BUFFSIZE, 0) != BUFFSIZE) {
+                    fclose(bdd_clients);
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fclose(bdd_clients);
+                    Die("Failed to receive additional bytes from client");
+                }
+
+            }
+            /* Send back received data */
+            /*if (send(sock, buffer, received, 0) != received) {
+            Die("Failed to send bytes to client");
+            }*/
+            //Check for more data
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                fclose(bdd_clients);
                 Die("Failed to receive additional bytes from client");
             }
-            //on trouve le client dans la base et on verifie que c'est le bon password
-        }
-
-        else if (!strcmp("SOLDE", requete)) {
-            char solde[200];
-            if (strcmp(liste_clients[i].compte[compte].liste[op[compte]-1].time, "")) sprintf(solde, "RES_SOLDE %d %s\n",liste_clients[i].compte[compte].montant, liste_clients[i].compte[compte].liste[op[compte]-1].time);
-            else sprintf(solde, "RES_SOLDE %d Aucune opération sur ce compte.",liste_clients[i].compte[compte].montant);
-            if (send(sock, solde, 200, 0) != 200) {
-                Die("Failed to send bytes to client");
-            }
-            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                Die("Failed to receive additional bytes from client");
-            }
-
-        }
-
-        else if (!strcmp("OPERATIONS", requete)) {
-            char temp[BUFFSIZE];
-            char message[BUFFSIZE];
-            sprintf(message, "RES_OPERATIONS\n");
-            int j = 0;
-            while (strcmp(liste_clients[i].compte[compte].liste[j].type, "")){
-                sprintf(temp, "%s %s %d\n", liste_clients[i].compte[compte].liste[j].type, liste_clients[i].compte[compte].liste[j].time, liste_clients[i].compte[compte].liste[j].montant);
-                strcat(message, temp);
-                j++;
-            }
-            if (send(sock, message, BUFFSIZE, 0) != BUFFSIZE) {
-                Die("Failed to send bytes to client");
-            }
-            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                Die("Failed to receive additional bytes from client");
-            }
-            
-        }
-        /* Send back received data */
-        /*if (send(sock, buffer, received, 0) != received) {
-        Die("Failed to send bytes to client");
-        }*/
-       //Check for more data
-        if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-        Die("Failed to receive additional bytes from client");
         }
     }
     close(sock);
 }
 
-int main(int argc, char *argv[]) {
-    //initialisation clients
-    liste_clients[0].id_client = "ibrahim";
-    liste_clients[0].password = "azerty";
-    liste_clients[1].id_client = "youssef";
-    liste_clients[1].password = "qwerty";
+int main(int argc, char* argv[]) {
+
+    //initialisation clients de la banque par lecture dans un fichier
+    FILE* bdd_clients = fopen("bdd_clients.csv", "r+");
+    char* line = NULL;
+    size_t len = 0;
+    int i = 0;
+    if (bdd_clients == NULL) {
+        bdd_clients = fopen("bdd_clients.csv", "w");
+        fprintf(bdd_clients, "id_client,password,nb_comptes,solde");
+    }
+    else {
+        getline(&line, &len, bdd_clients);
+        while (getline(&line, &len, bdd_clients) != -1){
+            if (line[0] == '\n') continue;
+            liste_clients[i].id_client = strtok(line, "  ,");
+            liste_clients[i].password = strtok(NULL, "  ,");
+            int nb_compte = strtol(strtok(NULL, "  ,"), NULL, 10);
+            liste_clients[i].compte = (Compte*) malloc(nb_compte);
+            for (int j = 0; j < nb_compte; j++) {
+                char * p = strtok(NULL, "  { , }");
+                if (p) liste_clients[i].compte[j].montant = strtol(p, NULL, 10);
+            }
+            i++;
+            nb_clients++;
+        }
+    }
+    fclose(bdd_clients);
     int serversock, clientsock;
     struct sockaddr_in echoserver, echoclient;
-    for (int i = 0; i < 5; i++) {
-        liste_clients[0].compte[i].montant = 1000;
-        liste_clients[1].compte[i].montant = 1000;
-    }
+
     if (argc != 2) {
         fprintf(stderr, "USAGE: echoserver <port>\n");
         exit(EXIT_FAILURE);
