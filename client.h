@@ -16,6 +16,7 @@ typedef struct{
 	char *id_client;
 	char *password;
 	Compte*compte;
+	int nb_compte;
 }Client;
 
 
