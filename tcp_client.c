@@ -5,14 +5,20 @@
 #include <string.h>
 #include <unistd.h>
 #include <netinet/in.h>
-
+#include <signal.h>
 #define BUFFSIZE 2000
 
+int sock;
 void Die(char *mess) { perror(mess); exit(EXIT_FAILURE); }
-
+void INThandler(int sig) {
+    signal(sig, SIG_IGN);
+    if (sock) close(sock);
+    printf("\nGoodbye\n");
+    exit(0);
+}
 
 int main(int argc, char *argv[]) {
-    int sock;
+    signal(SIGINT, INThandler);
     struct sockaddr_in echoserver;
     char buffer[BUFFSIZE];
     unsigned int echolen;
@@ -51,7 +57,34 @@ int main(int argc, char *argv[]) {
         buffer[bytes] = '\0';        /* Assure null terminated string */
         fprintf(stdout,"%s", buffer);
     }
-   fprintf(stdout, "\n");
-   close(sock);
-   exit(EXIT_SUCCESS);
+    fprintf(stdout, "\n");
+    char requete[50];
+    while (1){
+        received = 0;
+        memset(requete,0,sizeof(requete));
+        /* Send the word to the server */
+        fgets(requete,50,stdin);
+        fprintf(stderr,"requete: %s",requete);
+        requete[strcspn(requete, "\n")] = 0; // remove trailing newline (if any)
+        echolen = strlen(requete);
+        if (send(sock, requete, echolen, 0) != echolen) {
+            Die("Mismatch in number of sent bytes");
+        }
+        /* Receive the word back from the server */
+        fprintf(stdout, "Received: ");
+        while (received < echolen) {
+            int bytes = 0;
+            if ((bytes = recv(sock, buffer, BUFFSIZE-1, 0)) < 1) {
+            Die("Failed to receive bytes from server");
+            }
+            received += bytes;
+            buffer[bytes] = '\0';        /* Assure null terminated string */
+            fprintf(stdout,"%s", buffer);
+        }
+        fprintf(stdout, "\n");
+        if (!strcmp(requete,"exit")) break;
+        if (!strcmp(requete,"quit")) break;
+    }
+    close(sock);
+    exit(EXIT_SUCCESS);
 }

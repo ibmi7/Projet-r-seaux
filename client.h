@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#ifndef CLIENT_H
+#define CLIENT_H
 
 typedef struct {
 	char type[20];
@@ -15,9 +17,8 @@ typedef struct {
 typedef struct{
 	char *id_client;
 	char *password;
-	Compte compte[5];
+	Compte *compte;
+	int nb_compte;
 }Client;
 
-
-
-
+#endif
