@@ -2,10 +2,58 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "(gdb) Lancer",
+      "name": "UDP client",
       "type": "cppdbg",
       "request": "launch",
-      "program": "/home/ibrahim/Documents/EISE4/Réseaux/Projet-r-seaux/tcp_serveur.out",
+      "program": "/home/ibrahim/Documents/EISE4/Reseaux/Projet/Projet-r-seaux/udp_client",
+      "args": ["127.0.0.1","AJOUT ibrahim 3 azerty 500","2000"],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Activer l'impression en mode Pretty pour gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          },
+          {
+              "description": "Définir la version désassemblage sur Intel",
+              "text": "-gdb-set disassembly-flavor intel",
+              "ignoreFailures": true
+          }
+      ]
+    },
+    {
+      "name": "UDP",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/home/ibrahim/Documents/EISE4/Reseaux/Projet/Projet-r-seaux/udp_serveur",
+      "args": ["2000"],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Activer l'impression en mode Pretty pour gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          },
+          {
+              "description": "Définir la version désassemblage sur Intel",
+              "text": "-gdb-set disassembly-flavor intel",
+              "ignoreFailures": true
+          }
+      ]
+    },
+    {
+      "name": "TCP",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/home/ibrahim/Documents/EISE4/Reseaux/Projet/Projet-r-seaux/tcp_serveur",
       "args": [
         "2006"
       ],
