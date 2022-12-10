@@ -22,6 +22,7 @@ void Die(char *mess) { perror(mess); exit(EXIT_FAILURE); }
 Client liste_clients[2];
 char liste_operations[5][10][BUFFSIZE];
 int op[5] = {0,0,0,0,0};
+
 void HandleClient(int sock) {
     char buffer[50];
     int received = -1;
