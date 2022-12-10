@@ -23,13 +23,12 @@ Client liste_clients[2];
 char liste_operations[5][10][BUFFSIZE];
 int op[5] = {0,0,0,0,0};
 void HandleClient(int sock) {
-    char buffer[BUFFSIZE];
+    char buffer[50];
     int received = -1;
     /* Receive message */
-    if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+    if ((received = recv(sock, buffer, 50, 0)) < 0) {
         Die("Failed to receive initial bytes from client");
     }
-    fprintf(stderr,"%s\n", buffer);
     char*requete = NULL;
     char*client = NULL;
     char*password = NULL;
@@ -37,6 +36,7 @@ void HandleClient(int sock) {
     int compte = -1;
 
     while (received > 0) {
+        memset(buffer+received, 0, 50-received);
         requete = strtok(buffer, " \t");
         /* Send bytes and check for more incoming data in loop */
         //r�cup�ration id_client
