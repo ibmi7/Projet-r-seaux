@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#ifndef CLIENT_H
+#define CLIENT_H
 
 typedef struct {
 	char type[20];
@@ -19,6 +21,4 @@ typedef struct{
 	int nb_compte;
 }Client;
 
-
-
-
+#endif
