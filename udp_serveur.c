@@ -24,214 +24,193 @@ Client liste_clients[2];
 char liste_operations[5][10][BUFFSIZE];
 int op[5] = {0,0,0,0,0};
 
-void HandleClient() {
-    char buffer[50];
-    int received = -1;
-    socklen_t client_struct_length = sizeof(echoclient);
-    /* Receive message */
-    if ((received = recvfrom(serversock, buffer, 50, 0,(struct sockaddr*)&echoclient, &client_struct_length)) < 0) {
-        Die("Failed to receive initial bytes from client");
-    }
+void HandleClient(char* buffer) {
+
     char*requete = NULL;
     char*client = NULL;
     char*password = NULL;
     char* pend = NULL;
     int compte = -1;
 
-    while (received > 0) {
-        memset(buffer+received, 0, 50-received);
-        requete = strtok(buffer, " \t");
-        /* Send bytes and check for more incoming data in loop */
-        //r�cup�ration id_client
-        client = strtok(NULL, " \t");
-        if (!client) {
-            if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                Die("Failed to send bytes to client");
-            }
-            //fprintf(stderr,"Identifiant invalide.");
-            break;
+    requete = strtok(buffer, " \t");
+    /* Send bytes and check for more incoming data in loop */
+    //r�cup�ration id_client
+    client = strtok(NULL, " \t");
+    if (!client) {
+        if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
         }
+        fprintf(stderr,"Identifiant invalide.");
+    }
 
-        //r�cup�ration num�ro de compte
-        char* temp = strtok(NULL, " \t");
-        if (temp) compte = strtol(temp, NULL, 10);
+    //r�cup�ration num�ro de compte
+    char* temp = strtok(NULL, " \t");
+    if (temp) compte = strtol(temp, NULL, 10);
+    else {
+        if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
+        }
+        fprintf(stderr,"Numéro de compte invalide.");
+    }
+    if (compte<0 || compte >5) {
+        fprintf(stderr, "compte\n");
+        if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
+        }
+        fprintf(stderr,"Num�ro de compte invalide.");
+    }
+
+    //r�cup�ration mot de passe
+    password = strtok(NULL, " \t");
+    if (!password) {
+        fprintf(stderr, "compte\n");
+        if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
+        }
+        fprintf(stderr,"Mot de passe invalide.");
+    }
+
+    int i = 0;
+    //on v�rifie que le client est bien dans la base de donn�e
+    while (i < nb_clients && strcmp(liste_clients[i].id_client, client)) i++;
+    if (i >= nb_clients) {
+        if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
+        }
+    }
+    //on v�rifie que le mdp correspond bien
+    if (strcmp(liste_clients[i].password, password)) {
+        if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
+        }
+    }
+
+
+    //on verifie quelle operation
+    if (!strcmp("AJOUT", requete)) {
+
+        //on r�cup�re la somme � ajouter et on v�rifie que le num�ro de compte est valide
+        temp = strtok(NULL, " ");
+        int somme = 0;
+        if (temp) somme = strtol(temp, &pend, 10);
         else {
             if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
                 Die("Failed to send bytes to client");
             }
-            fprintf(stderr,"Numéro de compte invalide.");
-            continue;
         }
-        if (compte<0 || compte >5) {
+        if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant += somme;
+        else{
             fprintf(stderr, "compte\n");
             if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
                 Die("Failed to send bytes to client");
             }
             fprintf(stderr,"Num�ro de compte invalide.");
-            continue;
         }
 
-        //r�cup�ration mot de passe
-        password = strtok(NULL, " \t");
-        if (!password) {
+        //on met � jour la liste des op�rations
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
+        if (op[compte] == 10) { //si on atteint la fin du tableau, on supprime le premier �lement et on r�arrange pour �tre tri�
+            op[compte] = 9;
+            for (int j = 0; j < 10 - 1; j++) liste_clients[i].compte[compte].liste[j] = liste_clients[i].compte[compte].liste[j + 1];
+        }
+
+        sprintf(liste_clients[i].compte[compte].liste[op[compte]].type, "Ajout");
+        liste_clients[i].compte[compte].liste[op[compte]].montant = somme;
+        sprintf(liste_clients[i].compte[compte].liste[op[compte]].time, "%s", asctime(timeinfo));
+        liste_clients[i].compte[compte].liste[op[compte]].time[strlen(liste_clients[i].compte[compte].liste[op[compte]].time) - 1] = '\0'; //pour enlever le newline
+        op[compte]++;
+
+        if (sendto(serversock,"OK",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
+        }
+    }
+
+    else if (!strcmp("RETRAIT", requete)) {
+
+        //on r�cup�re la somme � retirer et on v�rifie que le num�ro de compte est valide
+        temp = strtok(NULL, " ");
+        int somme = 0;
+        if (temp) somme = strtol(temp, &pend, 10);
+        else {
+            if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+                Die("Failed to send bytes to client");
+            }
+        }
+        if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant -= somme;
+        else{
             fprintf(stderr, "compte\n");
             if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
                 Die("Failed to send bytes to client");
             }
-            fprintf(stderr,"Mot de passe invalide.");
-            continue;
+            fprintf(stderr,"Num�ro de compte invalide.");
         }
 
-        int i = 0;
-        //on v�rifie que le client est bien dans la base de donn�e
-        while (i < nb_clients && strcmp(liste_clients[i].id_client, client)) i++;
-        if (i >= nb_clients) {
-            if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                Die("Failed to send bytes to client");
-            }
-            continue;
+        //on met � jour la liste des op�rations
+
+        if (op[compte] == 10) { //si on atteint la fin du tableau, on supprime le premier �lement et on r�arrange pour �tre tri�
+            op[compte] = 9;
+            for (int j = 0; j < 10 - 1; j++) liste_clients[i].compte[compte].liste[j] = liste_clients[i].compte[compte].liste[j + 1];
+        }            
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
+        sprintf(liste_clients[i].compte[compte].liste[op[compte]].type, "Retrait");
+        liste_clients[i].compte[compte].liste[op[compte]].montant = somme;
+        sprintf(liste_clients[i].compte[compte].liste[op[compte]].time, "%s", asctime(timeinfo));
+        liste_clients[i].compte[compte].liste[op[compte]].time[strlen(liste_clients[i].compte[compte].liste[op[compte]].time) - 1] = '\0'; //pour enlever le newline
+        op[compte]++;
+
+        if (sendto(serversock,"OK",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
         }
-        //on v�rifie que le mdp correspond bien
-        if (strcmp(liste_clients[i].password, password)) {
-            if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                Die("Failed to send bytes to client");
-            }
-            continue;
-        }
-
-
-        //on verifie quelle operation
-        if (!strcmp("AJOUT", requete)) {
-
-            //on r�cup�re la somme � ajouter et on v�rifie que le num�ro de compte est valide
-            temp = strtok(NULL, " ");
-            int somme = 0;
-            if (temp) somme = strtol(temp, &pend, 10);
-            else {
-                if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                    Die("Failed to send bytes to client");
-                }
-                continue;
-            }
-            if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant += somme;
-            else{
-                fprintf(stderr, "compte\n");
-                if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                    Die("Failed to send bytes to client");
-                }
-                fprintf(stderr,"Num�ro de compte invalide.");
-                continue;
-            }
-
-            //on met � jour la liste des op�rations
-            time(&rawtime);
-            timeinfo = localtime(&rawtime);
-            if (op[compte] == 10) { //si on atteint la fin du tableau, on supprime le premier �lement et on r�arrange pour �tre tri�
-                op[compte] = 9;
-                for (int j = 0; j < 10 - 1; j++) liste_clients[i].compte[compte].liste[j] = liste_clients[i].compte[compte].liste[j + 1];
-            }
-
-            sprintf(liste_clients[i].compte[compte].liste[op[compte]].type, "Ajout");
-            liste_clients[i].compte[compte].liste[op[compte]].montant = somme;
-            sprintf(liste_clients[i].compte[compte].liste[op[compte]].time, "%s", asctime(timeinfo));
-            liste_clients[i].compte[compte].liste[op[compte]].time[strlen(liste_clients[i].compte[compte].liste[op[compte]].time) - 1] = '\0'; //pour enlever le newline
-            op[compte]++;
-
-            if (sendto(serversock,"OK",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                Die("Failed to send bytes to client");
-            }
-        }
-
-        else if (!strcmp("RETRAIT", requete)) {
-
-            //on r�cup�re la somme � retirer et on v�rifie que le num�ro de compte est valide
-            temp = strtok(NULL, " ");
-            int somme = 0;
-            if (temp) somme = strtol(temp, &pend, 10);
-            else {
-                if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                    Die("Failed to send bytes to client");
-                }
-                continue;
-            }
-            if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant -= somme;
-            else{
-                fprintf(stderr, "compte\n");
-                if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                    Die("Failed to send bytes to client");
-                }
-                fprintf(stderr,"Num�ro de compte invalide.");
-                continue;
-            }
-
-            //on met � jour la liste des op�rations
-
-            if (op[compte] == 10) { //si on atteint la fin du tableau, on supprime le premier �lement et on r�arrange pour �tre tri�
-                op[compte] = 9;
-                for (int j = 0; j < 10 - 1; j++) liste_clients[i].compte[compte].liste[j] = liste_clients[i].compte[compte].liste[j + 1];
-            }            
-            time(&rawtime);
-            timeinfo = localtime(&rawtime);
-            sprintf(liste_clients[i].compte[compte].liste[op[compte]].type, "Retrait");
-            liste_clients[i].compte[compte].liste[op[compte]].montant = somme;
-            sprintf(liste_clients[i].compte[compte].liste[op[compte]].time, "%s", asctime(timeinfo));
-            liste_clients[i].compte[compte].liste[op[compte]].time[strlen(liste_clients[i].compte[compte].liste[op[compte]].time) - 1] = '\0'; //pour enlever le newline
-            op[compte]++;
-
-            if (sendto(serversock,"OK",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                Die("Failed to send bytes to client");
-            }
-        }
-
-        else if (!strcmp("SOLDE", requete)) {
-            char solde[200];
-            if (compte>=liste_clients[i].nb_compte){
-                fprintf(stderr, "compte\n");
-                if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                    Die("Failed to send bytes to client");
-                }
-                fprintf(stderr,"Num�ro de compte invalide.");
-                continue;
-            }
-
-            if (strcmp(liste_clients[i].compte[compte].liste[op[compte]-1].time, "")) sprintf(solde, "RES_SOLDE %d %s\n",liste_clients[i].compte[compte].montant, liste_clients[i].compte[compte].liste[op[compte]-1].time);
-            else sprintf(solde, "RES_SOLDE %d Aucune op�ration sur ce compte.",liste_clients[i].compte[compte].montant);
-            if (sendto(serversock,solde,200,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                Die("Failed to send bytes to client");
-            }
-
-        }
-
-        else if (!strcmp("OPERATIONS", requete)) {
-            char temp[BUFFSIZE];
-            char message[BUFFSIZE];
-            sprintf(message, "RES_OPERATIONS\n");
-            int j = 0;
-            while (j<op[compte]){
-                sprintf(temp, "%s %s %d\n", liste_clients[i].compte[compte].liste[j].type, liste_clients[i].compte[compte].liste[j].time, liste_clients[i].compte[compte].liste[j].montant);
-                strcat(message, temp);
-                j++;
-            }
-            if (sendto(serversock,message,BUFFSIZE,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                Die("Failed to send bytes to client");
-            }
-            
-        }
-
-        else if (!strcmp("DECONNEXION", requete)) {
-            if (sendto(serversock,"OK",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                Die("Failed to send bytes to client");
-            }
-            break;
-        }
-
-            else {
-                if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                    Die("Failed to send bytes to client");
-                }
-                fprintf(stderr, "Requete invalide.");
-            }
     }
+
+    else if (!strcmp("SOLDE", requete)) {
+        char solde[200];
+        if (compte>=liste_clients[i].nb_compte){
+            fprintf(stderr, "compte\n");
+            if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+                Die("Failed to send bytes to client");
+            }
+            fprintf(stderr,"Num�ro de compte invalide.");
+        }
+
+        if (strcmp(liste_clients[i].compte[compte].liste[op[compte]-1].time, "")) sprintf(solde, "RES_SOLDE %d %s\n",liste_clients[i].compte[compte].montant, liste_clients[i].compte[compte].liste[op[compte]-1].time);
+        else sprintf(solde, "RES_SOLDE %d Aucune op�ration sur ce compte.",liste_clients[i].compte[compte].montant);
+        if (sendto(serversock,solde,200,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
+        }
+
+    }
+
+    else if (!strcmp("OPERATIONS", requete)) {
+        char temp[BUFFSIZE];
+        char message[BUFFSIZE];
+        sprintf(message, "RES_OPERATIONS\n");
+        int j = 0;
+        while (j<op[compte]){
+            sprintf(temp, "%s %s %d\n", liste_clients[i].compte[compte].liste[j].type, liste_clients[i].compte[compte].liste[j].time, liste_clients[i].compte[compte].liste[j].montant);
+            strcat(message, temp);
+            j++;
+        }
+        if (sendto(serversock,message,BUFFSIZE,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
+        }
+        
+    }
+
+    else if (!strcmp("DECONNEXION", requete)) {
+        if (sendto(serversock,"OK",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
+        }
+    }
+
+        else {
+            if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+                Die("Failed to send bytes to client");
+            }
+            fprintf(stderr, "Requete invalide.");
+        }
 }
 
 void INThandler(int sig) {
@@ -306,6 +285,15 @@ int main(int argc, char *argv[]) {
         }
         fprintf(stdout, "Client connected: %s\n",
                         inet_ntoa(echoclient.sin_addr));*/
-        HandleClient();
+        char buffer[50];
+        int received = -1;
+        socklen_t client_struct_length = sizeof(echoclient);
+        /* Receive message */
+        if ((received = recvfrom(serversock, buffer, 50, 0,(struct sockaddr*)&echoclient, &client_struct_length)) < 0) {
+            Die("Failed to receive initial bytes from client");
+        }
+        buffer[received] = '\0';
+        if (!strcmp(buffer,"exit")) continue;
+        HandleClient(buffer);
     }
 }

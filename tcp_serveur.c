@@ -22,7 +22,7 @@ void Die(char *mess) { perror(mess); exit(EXIT_FAILURE); }
 Client liste_clients[2];
 char liste_operations[5][10][BUFFSIZE];
 int op[5] = {0,0,0,0,0};
-
+struct sockaddr_in echoserver, echoclient;
 void HandleClient(int sock) {
     char buffer[50];
     int received = -1;
@@ -37,9 +37,20 @@ void HandleClient(int sock) {
     int compte = -1;
 
     while (received > 0) {
-        memset(buffer+received, 0, 50-received);
+        buffer[received] = '\0';
         requete = strtok(buffer, " \t");
-        /* Send bytes and check for more incoming data in loop */
+        if (!strcmp("exit", requete)) {
+            if (send(sock, "GOODBYE", 8, 0) != 8) {
+                Die("Failed to send bytes to client");
+            }
+            fprintf(stdout, "Client disconnected: %s\n",inet_ntoa(echoclient.sin_addr));
+            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                //Die("Failed to receive additional bytes from client");
+                break;
+            }
+            break;
+        }
+
         //r�cup�ration id_client
         client = strtok(NULL, " \t");
         if (!client) {
@@ -270,28 +281,6 @@ void HandleClient(int sock) {
             }
             
         }
-
-        else if (!strcmp("DECONNEXION", requete)) {
-            if (send(sock, "OK", received, 0) != received) {
-                Die("Failed to send bytes to client");
-            }
-            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
-                break;
-            }
-            break;
-        }
-
-            else {
-                if (send(sock, "KO", received, 0) != received) {
-                    Die("Failed to send bytes to client");
-                }
-                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                    //Die("Failed to receive additional bytes from client");
-                    break;
-                }
-                fprintf(stderr, "Requete invalide.");
-            }
     }
     close(sock);
 }
@@ -338,7 +327,6 @@ int main(int argc, char *argv[]) {
     }
     fclose(bdd_clients);
 
-    struct sockaddr_in echoserver, echoclient;
     if (argc != 2) {
         fprintf(stderr, "USAGE: echoserver <port>\n");
         exit(EXIT_FAILURE);
@@ -354,18 +342,18 @@ int main(int argc, char *argv[]) {
     echoserver.sin_port = htons(atoi(argv[1]));       /* server port */
 /* Bind the server socket */
     if (bind(serversock, (struct sockaddr *) &echoserver, sizeof(echoserver)) < 0) {
-    Die("Failed to bind the server socket");
+        Die("Failed to bind the server socket");
     }
     /* Listen on the server socket */
     if (listen(serversock, MAXPENDING) < 0) {
-    Die("Failed to listen on server socket");
+        Die("Failed to listen on server socket");
     }
 /* Run until cancelled */
     while (1) {
         unsigned int clientlen = sizeof(echoclient);
         /* Wait for client connection */
         if ((clientsock = accept(serversock, (struct sockaddr *) &echoclient, &clientlen)) < 0) {
-        Die("Failed to accept client connection");
+            Die("Failed to accept client connection");
         }
         fprintf(stdout, "Client connected: %s\n",
                         inet_ntoa(echoclient.sin_addr));

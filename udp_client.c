@@ -22,7 +22,6 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in echoserver;
     char buffer[BUFFSIZE];
     unsigned int echolen;
-    int received = 0;
 
     if (argc != 4) {
         fprintf(stderr, "USAGE: TCPecho <server_ip> <word> <port>\n");
@@ -46,20 +45,31 @@ int main(int argc, char *argv[]) {
     echolen = strlen(argv[2]);
     socklen_t server_struct_length = sizeof(echoserver);
     if (sendto(sock,argv[2],echolen,0,(struct sockaddr *) &echoserver,server_struct_length)<0){
-        Die("Mismatch in number of sent bytes");
+        Die("Failed to send data");
     }
     /* Receive the word back from the server */
     fprintf(stdout, "Received: ");
-    while (received < 3) {
-        int bytes = recvfrom(sock,buffer,BUFFSIZE-1,0,(struct sockaddr *) &echoserver,&server_struct_length);
-        if (bytes <1){
-            Die("Failed to receive bytes from server");
-        }
-        received += bytes;
-        buffer[bytes] = '\0';        /* Assure null terminated string */
-        fprintf(stdout,"%s", buffer);
-    }
+    recvfrom(sock,buffer,BUFFSIZE-1,0,(struct sockaddr *) &echoserver,&server_struct_length);
+    fprintf(stdout,"%s", buffer);
     fprintf(stdout, "\n");
+    char requete[50];
+    while (1){
+        memset(requete,0,sizeof(requete));
+        /* Send the word to the server */
+        fgets(requete,50,stdin);
+        fprintf(stderr,"requete: %s",requete);
+        requete[strcspn(requete, "\n")] = 0; // remove trailing newline (if any)
+        echolen = strlen(requete);
+        if (sendto(sock,requete,echolen,0,(struct sockaddr *) &echoserver,server_struct_length)<0) {
+            Die("Failed to send data");
+        }
+        if (!strcmp(requete,"exit")) break;
+        /* Receive the word back from the server */
+        fprintf(stdout, "Received: ");
+        recvfrom(sock,buffer,BUFFSIZE-1,0,(struct sockaddr *) &echoserver,&server_struct_length);
+        fprintf(stdout,"%s", buffer);
+        fprintf(stdout, "\n");
+    }
     close(sock);
     exit(EXIT_SUCCESS);
 }
