@@ -41,6 +41,7 @@ void HandleClient(char* buffer) {
             Die("Failed to send bytes to client");
         }
         fprintf(stderr,"Identifiant invalide.");
+        return;
     }
 
     //r�cup�ration num�ro de compte
@@ -58,6 +59,7 @@ void HandleClient(char* buffer) {
             Die("Failed to send bytes to client");
         }
         fprintf(stderr,"Num�ro de compte invalide.");
+        return;
     }
 
     //r�cup�ration mot de passe
@@ -68,6 +70,7 @@ void HandleClient(char* buffer) {
             Die("Failed to send bytes to client");
         }
         fprintf(stderr,"Mot de passe invalide.");
+        return;
     }
 
     int i = 0;
@@ -77,12 +80,14 @@ void HandleClient(char* buffer) {
         if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
             Die("Failed to send bytes to client");
         }
+        return;
     }
     //on v�rifie que le mdp correspond bien
     if (strcmp(liste_clients[i].password, password)) {
         if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
             Die("Failed to send bytes to client");
         }
+        return;
     }
 
 
@@ -97,6 +102,7 @@ void HandleClient(char* buffer) {
             if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
                 Die("Failed to send bytes to client");
             }
+            return;
         }
         if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant += somme;
         else{
@@ -105,6 +111,7 @@ void HandleClient(char* buffer) {
                 Die("Failed to send bytes to client");
             }
             fprintf(stderr,"Num�ro de compte invalide.");
+            return;
         }
 
         //on met � jour la liste des op�rations
@@ -136,6 +143,7 @@ void HandleClient(char* buffer) {
             if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
                 Die("Failed to send bytes to client");
             }
+            return;
         }
         if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant -= somme;
         else{
@@ -144,6 +152,7 @@ void HandleClient(char* buffer) {
                 Die("Failed to send bytes to client");
             }
             fprintf(stderr,"Num�ro de compte invalide.");
+            return;
         }
 
         //on met � jour la liste des op�rations
@@ -173,6 +182,7 @@ void HandleClient(char* buffer) {
                 Die("Failed to send bytes to client");
             }
             fprintf(stderr,"Num�ro de compte invalide.");
+            return;
         }
 
         if (strcmp(liste_clients[i].compte[compte].liste[op[compte]-1].time, "")) sprintf(solde, "RES_SOLDE %d %s\n",liste_clients[i].compte[compte].montant, liste_clients[i].compte[compte].liste[op[compte]-1].time);
@@ -199,10 +209,11 @@ void HandleClient(char* buffer) {
         
     }
 
-    else if (!strcmp("DECONNEXION", requete)) {
+    else if (!strcmp("exit", requete)) {
         if (sendto(serversock,"OK",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
             Die("Failed to send bytes to client");
         }
+        return;
     }
 
         else {
@@ -210,6 +221,7 @@ void HandleClient(char* buffer) {
                 Die("Failed to send bytes to client");
             }
             fprintf(stderr, "Requete invalide.");
+            return;
         }
 }
 
