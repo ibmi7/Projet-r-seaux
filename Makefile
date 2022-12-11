@@ -4,9 +4,6 @@ tcp: tcp_client tcp_serveur
 
 udp: udp_client udp_serveur
 
-tcp_serveur_fork: tcp_serveur_fork.c client.h
-	gcc -Wall -g tcp_serveur_fork.c -o tcp_serveur_fork
-
 tcp_client: tcp_client.c client.h
 	gcc -Wall -g tcp_client.c -o tcp_client
 

@@ -350,6 +350,7 @@ int main(int argc, char *argv[]) {
     }
 /* Run until cancelled */
     while (1) {
+        // http://www.tutorialspoint.com/unix_sockets/socket_server_example.htm
         unsigned int clientlen = sizeof(echoclient);
         /* Wait for client connection */
         if ((clientsock = accept(serversock, (struct sockaddr *) &echoclient, &clientlen)) < 0) {
@@ -357,6 +358,9 @@ int main(int argc, char *argv[]) {
         }
         fprintf(stdout, "Client connected: %s\n",
                         inet_ntoa(echoclient.sin_addr));
-        HandleClient(clientsock);
+        int pid = fork();
+        if (pid==0) {
+            HandleClient(clientsock);
+        }
     }
 }
