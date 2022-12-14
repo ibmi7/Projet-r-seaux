@@ -3,14 +3,7 @@
 #define CLIENT_H
 
 typedef struct {
-	char type[20];
 	int montant;
-	char time[100];
-}Operation;
-
-typedef struct {
-	int montant;
-	Operation liste[10];
 }Compte;
 
 

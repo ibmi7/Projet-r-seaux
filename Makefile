@@ -1,9 +1,11 @@
-all: tcp udp
+all: tcp udp thread
 
 tcp: tcp_client tcp_serveur
 
 udp: udp_client udp_serveur
 
+thread: tcp_serveur_thread client.h
+	gcc -Wall -g tcp_serveur_thread.c -o tcp_serveur_thread -lpthread
 tcp_serveur_fork: tcp_serveur_fork.c client.h
 	gcc -Wall -g tcp_serveur_fork.c -o tcp_serveur_fork
 
