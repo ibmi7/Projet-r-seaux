@@ -69,7 +69,7 @@ void HandleClient(int sock) {
         char* temp = strtok(NULL, " \t");
         if (temp) compte = strtol(temp, NULL, 10);
         else {
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -81,7 +81,7 @@ void HandleClient(int sock) {
         }
         if (compte<0) {
             fprintf(stderr, "compte\n");
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -95,7 +95,7 @@ void HandleClient(int sock) {
         password = strtok(NULL, " \t");
         if (!password) {
             fprintf(stderr, "compte\n");
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -110,7 +110,7 @@ void HandleClient(int sock) {
         //on v�rifie que le client est bien dans la base de donn�e
         while (i < nb_clients && strcmp(liste_clients[i].id_client, client)) i++;
         if (i >= nb_clients) {
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -120,7 +120,7 @@ void HandleClient(int sock) {
         }
         //on v�rifie que le mdp correspond bien
         if (strcmp(liste_clients[i].password, password)) {
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -139,7 +139,7 @@ void HandleClient(int sock) {
             int somme = 0;
             if (temp) somme = strtol(temp, &pend, 10);
             else {
-                if (send(sock, "KO", received, 0) != received) {
+                if (send(sock, "KO", 3, 0) != 3) {
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -150,7 +150,7 @@ void HandleClient(int sock) {
             }
             if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant += somme;
             else{
-                if (send(sock, "KO", received, 0) != received) {
+                if (send(sock, "KO", 3, 0) != 3) {
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -189,7 +189,7 @@ void HandleClient(int sock) {
             fclose(fichier);
         
             //on envoie un message de confirmation
-            if (send(sock, "OK", received, 0) != received) {
+            if (send(sock, "OK", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -205,7 +205,7 @@ void HandleClient(int sock) {
             int somme = 0;
             if (temp) somme = strtol(temp, &pend, 10);
             else {
-                if (send(sock, "KO", received, 0) != received) {
+                if (send(sock, "KO", 3, 0) != 3) {
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -216,7 +216,7 @@ void HandleClient(int sock) {
             }
             if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant -= somme;
             else{
-                if (send(sock, "KO", received, 0) != received) {
+                if (send(sock, "KO", 3, 0) != 3) {
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -255,7 +255,7 @@ void HandleClient(int sock) {
             fclose(fichier);
         
             //on envoie un message de confirmation
-            if (send(sock, "OK", received, 0) != received) {
+            if (send(sock, "OK", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -268,7 +268,7 @@ void HandleClient(int sock) {
         else if (!strcmp("SOLDE", requete)) {
             char solde[200];
             if (compte>=liste_clients[i].nb_compte){
-                if (send(sock, "KO", received, 0) != received) {
+                if (send(sock, "KO", 3, 0) != 3) {
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
