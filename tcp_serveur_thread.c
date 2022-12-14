@@ -59,18 +59,22 @@ void*HandleClient(void* param) {
         //r�cup�ration id_client
         client = strtok(NULL, " \t");
         if (!client) {
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
+            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                //Die("Failed to receive additional bytes from client");
+                break;
+            }
             //fprintf(stderr,"Identifiant invalide.");
-            break;
+            continue;
         }
 
         //r�cup�ration num�ro de compte
         char* temp = strtok(NULL, " \t");
         if (temp) compte = strtol(temp, NULL, 10);
         else {
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -82,7 +86,7 @@ void*HandleClient(void* param) {
         }
         if (compte<0) {
             fprintf(stderr, "compte\n");
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -96,7 +100,7 @@ void*HandleClient(void* param) {
         password = strtok(NULL, " \t");
         if (!password) {
             fprintf(stderr, "compte\n");
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -111,7 +115,7 @@ void*HandleClient(void* param) {
         //on v�rifie que le client est bien dans la base de donn�e
         while (i < nb_clients && strcmp(liste_clients[i].id_client, client)) i++;
         if (i >= nb_clients) {
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -121,7 +125,7 @@ void*HandleClient(void* param) {
         }
         //on v�rifie que le mdp correspond bien
         if (strcmp(liste_clients[i].password, password)) {
-            if (send(sock, "KO", received, 0) != received) {
+            if (send(sock, "KO", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -140,7 +144,7 @@ void*HandleClient(void* param) {
             int somme = 0;
             if (temp) somme = strtol(temp, &pend, 10);
             else {
-                if (send(sock, "KO", received, 0) != received) {
+                if (send(sock, "KO", 3, 0) != 3) {
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -151,7 +155,7 @@ void*HandleClient(void* param) {
             }
             if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant += somme;
             else{
-                if (send(sock, "KO", received, 0) != received) {
+                if (send(sock, "KO", 3, 0) != 3) {
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -190,7 +194,7 @@ void*HandleClient(void* param) {
             fclose(fichier);
         
             //on envoie un message de confirmation
-            if (send(sock, "OK", received, 0) != received) {
+            if (send(sock, "OK", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -217,7 +221,7 @@ void*HandleClient(void* param) {
             }
             if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant -= somme;
             else{
-                if (send(sock, "KO", received, 0) != received) {
+                if (send(sock, "KO", 3, 0) != 3) {
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -256,7 +260,7 @@ void*HandleClient(void* param) {
             fclose(fichier);
         
             //on envoie un message de confirmation
-            if (send(sock, "OK", received, 0) != received) {
+            if (send(sock, "OK", 3, 0) != 3) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -269,7 +273,7 @@ void*HandleClient(void* param) {
         else if (!strcmp("SOLDE", requete)) {
             char solde[200];
             if (compte>=liste_clients[i].nb_compte){
-                if (send(sock, "KO", received, 0) != received) {
+                if (send(sock, "KO", 3, 0) != 3) {
                     Die("Failed to send bytes to client");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
@@ -349,6 +353,16 @@ void*HandleClient(void* param) {
                 //Die("Failed to receive additional bytes from client");
                 break;
             }
+        }
+        else{
+            if (send(sock, "KO", 3, 0) != 3) {
+                Die("Failed to send bytes to client");
+            }
+            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                //Die("Failed to receive additional bytes from client");
+                break;
+            }
+            fprintf(stderr,"Requ�te invalide.");
         }
     }
     close(sock);
@@ -446,13 +460,13 @@ int main(int argc, char *argv[]) {
         if ((clientsock = accept(serversock, (struct sockaddr *) &echoclient, &clientlen)) < 0) {
             Die("Failed to accept client connection");
         }
-
+        fprintf(stdout, "Client connected: %s\n",
+                        inet_ntoa(echoclient.sin_addr));
         if (pthread_create(&tid[i], NULL, &HandleClient, (void *) &clientsock) != 0) {
             Die("Failed to create thread\n");
         }
         i++;
-        fprintf(stdout, "Client connected: %s\n",
-                        inet_ntoa(echoclient.sin_addr));
+
         if (i>=MAXPENDING){
             i = 0;
             while (i < MAXPENDING) {

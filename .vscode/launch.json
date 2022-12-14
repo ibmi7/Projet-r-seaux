@@ -50,12 +50,38 @@
       ]
     },
     {
+      "name": "THREAD",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/home/ibrahim/Documents/EISE4/Reseaux/Projet/Projet-r-seaux/tcp_serveur_thread",
+      "args": [
+        "2007"
+      ],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Activer l'impression en mode Pretty pour gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Définir la version désassemblage sur Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ]
+    },
+    {
       "name": "TCP",
       "type": "cppdbg",
       "request": "launch",
       "program": "/home/ibrahim/Documents/EISE4/Reseaux/Projet/Projet-r-seaux/tcp_serveur",
       "args": [
-        "2007"
+        "2001"
       ],
       "stopAtEntry": false,
       "cwd": "${fileDirname}",

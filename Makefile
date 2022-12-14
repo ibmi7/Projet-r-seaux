@@ -6,6 +6,7 @@ udp: udp_client udp_serveur
 
 thread: tcp_serveur_thread client.h
 	gcc -Wall -g tcp_serveur_thread.c -o tcp_serveur_thread -lpthread
+
 tcp_serveur_fork: tcp_serveur_fork.c client.h
 	gcc -Wall -g tcp_serveur_fork.c -o tcp_serveur_fork
 
@@ -23,5 +24,5 @@ udp_serveur: udp_serveur.c client.h
 
 .PHONY : clean
  clean:
-	rm tcp_client tcp_serveur udp_client udp_serveur
+	rm tcp_client tcp_serveur udp_client udp_serveur tcp_serveur_fork tcp_serveur_thread
 

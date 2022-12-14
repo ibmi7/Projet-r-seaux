@@ -22,7 +22,6 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in echoserver;
     char buffer[BUFFSIZE];
     unsigned int echolen;
-    int received = 0;
 
     if (argc != 4) {
         fprintf(stderr, "USAGE: TCPecho <server_ip> <word> <port>\n");
@@ -48,19 +47,15 @@ int main(int argc, char *argv[]) {
     }
     /* Receive the word back from the server */
     fprintf(stdout, "Received: ");
-    while (received < echolen) {
-        int bytes = 0;
-        if ((bytes = recv(sock, buffer, BUFFSIZE-1, 0)) < 1) {
-        Die("Failed to receive bytes from server");
-        }
-        received += bytes;
-        buffer[bytes] = '\0';        /* Assure null terminated string */
-        fprintf(stdout,"%s", buffer);
+    int bytes = 0;
+    if ((bytes = recv(sock, buffer, BUFFSIZE-1, 0)) < 1) {
+    Die("Failed to receive bytes from server");
     }
+    buffer[bytes] = '\0';        /* Assure null terminated string */
+    fprintf(stdout,"%s", buffer);
     fprintf(stdout, "\n");
     char requete[50];
     while (1){
-        received = 0;
         memset(requete,0,sizeof(requete));
         /* Send the word to the server */
         fgets(requete,50,stdin);
@@ -72,15 +67,12 @@ int main(int argc, char *argv[]) {
         }
         /* Receive the word back from the server */
         fprintf(stdout, "Received: ");
-        while (received < echolen) {
-            int bytes = 0;
-            if ((bytes = recv(sock, buffer, BUFFSIZE-1, 0)) < 1) {
+        int bytes = 0;
+        if ((bytes = recv(sock, buffer, BUFFSIZE-1, 0)) < 1) {
             Die("Failed to receive bytes from server");
-            }
-            received += bytes;
-            buffer[bytes] = '\0';        /* Assure null terminated string */
-            fprintf(stdout,"%s", buffer);
         }
+        buffer[bytes] = '\0';        /* Assure null terminated string */
+        fprintf(stdout,"%s", buffer);
         fprintf(stdout, "\n");
         if (!strcmp(requete,"exit")) break;
         if (!strcmp(requete,"quit")) break;

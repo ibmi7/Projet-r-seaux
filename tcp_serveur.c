@@ -57,8 +57,12 @@ void HandleClient(int sock) {
             if (send(sock, "KO", received, 0) != received) {
                 Die("Failed to send bytes to client");
             }
+            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                //Die("Failed to receive additional bytes from client");
+                break;
+            }
             //fprintf(stderr,"Identifiant invalide.");
-            break;
+            continue;
         }
 
         //r�cup�ration num�ro de compte
@@ -344,6 +348,16 @@ void HandleClient(int sock) {
                 //Die("Failed to receive additional bytes from client");
                 break;
             }
+        }
+        else{
+            if (send(sock, "KO", 3, 0) != 3) {
+                Die("Failed to send bytes to client");
+            }
+            if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                //Die("Failed to receive additional bytes from client");
+                break;
+            }
+            fprintf(stderr,"Requ�te invalide.");
         }
     }
     close(sock);

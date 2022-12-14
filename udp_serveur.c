@@ -284,13 +284,13 @@ void HandleClient(char* buffer) {
         return;
     }
 
-        else {
-            if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
-                Die("Failed to send bytes to client");
-            }
-            fprintf(stderr, "Requete invalide.");
-            return;
+    else {
+        if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
+            Die("Failed to send bytes to client");
         }
+        fprintf(stderr, "Requete invalide.");
+        return;
+    }
 }
 
 void INThandler(int sig) {
