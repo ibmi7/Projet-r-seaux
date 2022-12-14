@@ -17,12 +17,12 @@ struct sockaddr_in echoserver, echoclient;
 time_t rawtime;
 struct tm* timeinfo;
 int nb_clients = 0;
+time_t rawtime;
+char * temps;
 
 void Die(char *mess) { perror(mess); exit(EXIT_FAILURE); }
 
 Client liste_clients[2];
-char liste_operations[5][10][BUFFSIZE];
-int op[5] = {0,0,0,0,0};
 
 void HandleClient(char* buffer) {
 
@@ -53,7 +53,7 @@ void HandleClient(char* buffer) {
         }
         fprintf(stderr,"Numéro de compte invalide.");
     }
-    if (compte<0 || compte >5) {
+    if (compte<0) {
         fprintf(stderr, "compte\n");
         if (sendto(serversock,"KO",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
             Die("Failed to send bytes to client");
@@ -113,20 +113,33 @@ void HandleClient(char* buffer) {
             fprintf(stderr,"Num�ro de compte invalide.");
             return;
         }
-
-        //on met � jour la liste des op�rations
-        time(&rawtime);
-        timeinfo = localtime(&rawtime);
-        if (op[compte] == 10) { //si on atteint la fin du tableau, on supprime le premier �lement et on r�arrange pour �tre tri�
-            op[compte] = 9;
-            for (int j = 0; j < 10 - 1; j++) liste_clients[i].compte[compte].liste[j] = liste_clients[i].compte[compte].liste[j + 1];
+        
+        //on met � jour le fichier liste_operations_id.txt
+        char nom_fichier[100];
+        sprintf(nom_fichier, "OperationsClients/liste_operations_%s.txt", liste_clients[i].id_client);
+        FILE* liste_op = fopen(nom_fichier, "a");
+        if (liste_op == NULL) {
+            fprintf(stderr, "Impossible d'ouvrir le fichier liste_operations.txt");
+            return;
         }
+        fprintf(liste_op, "%d;AJOUT;%d;%s", compte, somme,temps);
+        fclose(liste_op);
 
-        sprintf(liste_clients[i].compte[compte].liste[op[compte]].type, "Ajout");
-        liste_clients[i].compte[compte].liste[op[compte]].montant = somme;
-        sprintf(liste_clients[i].compte[compte].liste[op[compte]].time, "%s", asctime(timeinfo));
-        liste_clients[i].compte[compte].liste[op[compte]].time[strlen(liste_clients[i].compte[compte].liste[op[compte]].time) - 1] = '\0'; //pour enlever le newline
-        op[compte]++;
+        //on met � jour le fichier bdd_clients.csv
+        FILE* fichier = fopen("bdd_clients.csv", "w");
+        if (fichier == NULL) {
+            fprintf(stderr, "Impossible d'ouvrir le fichier bdd_clients.csv");
+            return;
+        }
+        fprintf(fichier, "id_client;password;nb_comptes;solde\n");
+        for (int j = 0; j < nb_clients; j++) {
+            fprintf(fichier, "%s;%s;%d;", liste_clients[j].id_client, liste_clients[j].password, liste_clients[j].nb_compte);
+            for (int k = 0; k < liste_clients[j].nb_compte; k++) {
+                fprintf(fichier, "%d;", liste_clients[j].compte[k].montant);
+            }
+            fprintf(fichier, "\n");
+        }
+        fclose(fichier);
 
         if (sendto(serversock,"OK",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
             Die("Failed to send bytes to client");
@@ -155,19 +168,32 @@ void HandleClient(char* buffer) {
             return;
         }
 
-        //on met � jour la liste des op�rations
+        //on met � jour le fichier liste_operations_id.txt
+        char nom_fichier[100];
+        sprintf(nom_fichier, "OperationsClients/liste_operations_%s.txt", liste_clients[i].id_client);
+        FILE* liste_op = fopen(nom_fichier, "a");
+        if (liste_op == NULL) {
+            fprintf(stderr, "Impossible d'ouvrir le fichier liste_operations.txt");
+            return;
+        }
+        fprintf(liste_op, "%d;RETRAIT;%d;%s", compte, somme,temps);
+        fclose(liste_op);
 
-        if (op[compte] == 10) { //si on atteint la fin du tableau, on supprime le premier �lement et on r�arrange pour �tre tri�
-            op[compte] = 9;
-            for (int j = 0; j < 10 - 1; j++) liste_clients[i].compte[compte].liste[j] = liste_clients[i].compte[compte].liste[j + 1];
-        }            
-        time(&rawtime);
-        timeinfo = localtime(&rawtime);
-        sprintf(liste_clients[i].compte[compte].liste[op[compte]].type, "Retrait");
-        liste_clients[i].compte[compte].liste[op[compte]].montant = somme;
-        sprintf(liste_clients[i].compte[compte].liste[op[compte]].time, "%s", asctime(timeinfo));
-        liste_clients[i].compte[compte].liste[op[compte]].time[strlen(liste_clients[i].compte[compte].liste[op[compte]].time) - 1] = '\0'; //pour enlever le newline
-        op[compte]++;
+        //on met � jour le fichier bdd_clients.csv
+        FILE* fichier = fopen("bdd_clients.csv", "w");
+        if (fichier == NULL) {
+            fprintf(stderr, "Impossible d'ouvrir le fichier bdd_clients.csv");
+            return;
+        }
+        fprintf(fichier, "id_client;password;nb_comptes;solde\n");
+        for (int j = 0; j < nb_clients; j++) {
+            fprintf(fichier, "%s;%s;%d;", liste_clients[j].id_client, liste_clients[j].password, liste_clients[j].nb_compte);
+            for (int k = 0; k < liste_clients[j].nb_compte; k++) {
+                fprintf(fichier, "%d;", liste_clients[j].compte[k].montant);
+            }
+            fprintf(fichier, "\n");
+        }
+        fclose(fichier);
 
         if (sendto(serversock,"OK",3,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
             Die("Failed to send bytes to client");
@@ -185,8 +211,28 @@ void HandleClient(char* buffer) {
             return;
         }
 
-        if (strcmp(liste_clients[i].compte[compte].liste[op[compte]-1].time, "")) sprintf(solde, "RES_SOLDE %d %s\n",liste_clients[i].compte[compte].montant, liste_clients[i].compte[compte].liste[op[compte]-1].time);
-        else sprintf(solde, "RES_SOLDE %d Aucune op�ration sur ce compte.",liste_clients[i].compte[compte].montant);
+        //on lit dans le fichier la dernière opération
+        char* line = NULL;
+        size_t len = 0;
+        char* date;
+        char nom_fichier[100];
+        sprintf(nom_fichier, "OperationsClients/liste_operations_%s.txt", client);
+        FILE* liste_op = fopen(nom_fichier, "r");
+        if (liste_op == NULL) {
+            fprintf(stderr, "Impossible d'ouvrir le fichier liste_operations.txt");
+            return;
+        }
+        while ((getline(&line, &len, liste_op)) != -1) {
+            if (strtol(line, NULL, 10) == compte){
+                strtok(line, ";");
+                strtok(NULL, ";");
+                strtok(NULL, ";");
+                date = strtok(NULL, ";");
+                date[strlen(date) - 1] = '\0';
+            }
+        }
+        fclose(liste_op);
+        sprintf(solde, "RES_SOLDE %d %s",liste_clients[i].compte[compte].montant, date);
         if (sendto(serversock,solde,200,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
             Die("Failed to send bytes to client");
         }
@@ -194,14 +240,36 @@ void HandleClient(char* buffer) {
     }
 
     else if (!strcmp("OPERATIONS", requete)) {
-        char temp[BUFFSIZE];
+        char* line = NULL;
         char message[BUFFSIZE];
+        int count = 0;
+        size_t len = 0;
+        char* operation[10];
         sprintf(message, "RES_OPERATIONS\n");
-        int j = 0;
-        while (j<op[compte]){
-            sprintf(temp, "%s %s %d\n", liste_clients[i].compte[compte].liste[j].type, liste_clients[i].compte[compte].liste[j].time, liste_clients[i].compte[compte].liste[j].montant);
-            strcat(message, temp);
-            j++;
+        char nom_fichier[100];
+        sprintf(nom_fichier, "OperationsClients/liste_operations_%s.txt", liste_clients[i].id_client);
+        FILE* liste_op = fopen(nom_fichier, "r");
+        if (liste_op == NULL) {
+            fprintf(stderr, "Impossible d'ouvrir le fichier liste_operations.txt");
+            return;
+        }
+        while ((getline(&line, &len, liste_op)) != -1) {
+            if (strtol(line, NULL, 10) == compte){
+                if (count == 10){
+                    for (int j = 0; j < 9; j++) {
+                        operation[j] = malloc(sizeof(char) * strlen(operation[j + 1]));
+                        strcpy(operation[j], operation[j + 1]);
+                    }
+                    count = 9;
+                }
+                operation[count] = malloc(sizeof(char) * strlen(line));
+                strcpy(operation[count], line);
+                count++;
+            }
+        }
+        fclose(liste_op);
+        for (int j = 0; j < count; j++) {
+            strcat(message, operation[j]);
         }
         if (sendto(serversock,message,BUFFSIZE,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
             Die("Failed to send bytes to client");
@@ -236,33 +304,50 @@ void INThandler(int sig) {
 int main(int argc, char *argv[]) {
 //initialisation clients de la banque par lecture dans un fichier
     signal(SIGINT, INThandler);
+    time(&rawtime);
+    temps = ctime(&rawtime);
     FILE* bdd_clients = fopen("bdd_clients.csv", "r+");
     char* line = NULL;
     size_t len = 0;
     int i = 0;
     if (bdd_clients == NULL) {
         bdd_clients = fopen("bdd_clients.csv", "w");
-        fprintf(bdd_clients, "id_client;password;nb_comptes;solde");
+        fprintf(bdd_clients, "id_client,password,nb_comptes,solde");
     }
     else {
         getline(&line, &len, bdd_clients);
         while (getline(&line, &len, bdd_clients) != -1){
-            if (!strcmp(line,"\n")) continue;
-            char* client = strtok(line, "  , ;");
-            char* password = strtok(NULL, "  , ;");
+            if (!strcmp(line,"\n")) break;
+            char* client = strtok(line, "  , ; \n");
+            if (!client) continue;
+            char* password = strtok(NULL, "  , ; \n");
+            if (!password) continue;
             liste_clients[i].id_client = (char*) malloc(strlen(client) + 1);
             liste_clients[i].password = (char*) malloc(strlen(password) + 1);
             if (client) strcpy(liste_clients[i].id_client,client);
             if (password) strcpy(liste_clients[i].password,password);
-            int nb_compte = strtol(strtok(NULL, "  , ;"), NULL, 10);
+            int nb_compte = strtol(strtok(NULL, "  , ; \n"), NULL, 10);
+            if (!nb_compte) continue;
             liste_clients[i].compte = (Compte*) malloc(nb_compte);
             liste_clients[i].nb_compte = nb_compte;
             for (int j = 0; j < nb_compte; j++) {
-                char * p = strtok(NULL, "  { , } ;");
+                char * p = strtok(NULL, "  { , } ; \n");
                 if (p) liste_clients[i].compte[j].montant = strtol(p, NULL, 10);
+                else liste_clients[i].compte[j].montant = 0;
+            }
+            char nom_fichier[100];
+            sprintf(nom_fichier, "OperationsClients/liste_operations_%s.txt", client);
+            if (access(nom_fichier, F_OK)) { //on verifie si le fichier existe
+                FILE* op_clients = fopen(nom_fichier, "w");
+                fclose(op_clients);
             }
             i++;
             nb_clients++;
+        }
+        for (int i = 0;i<nb_clients;i++){
+            printf("id : %s  mdp : %s\t",liste_clients[i].id_client,liste_clients[i].password);
+            for (int j = 0;j<liste_clients[i].nb_compte;j++) printf("%d ",liste_clients[i].compte[j].montant);
+            printf("\n");
         }
     }
     fclose(bdd_clients);
@@ -309,3 +394,6 @@ int main(int argc, char *argv[]) {
         HandleClient(buffer);
     }
 }
+
+
+//https://stackoverflow.com/questions/13669474/multiclient-server-using-fork

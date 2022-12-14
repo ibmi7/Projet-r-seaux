@@ -1,6 +1,7 @@
-/.vscode
-tcp_client
-tcp_serveur
-udp_serveur
-udp_client
-tcp_serveur_fork
+# Ignore everything in the .vscode directory
+.vscode/
+
+# Ignore executables
+*.exe
+*.out
+*.o
