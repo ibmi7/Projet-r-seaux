@@ -59,7 +59,6 @@ int main(int argc, char *argv[]) {
         memset(requete,0,sizeof(requete));
         /* Send the word to the server */
         fgets(requete,50,stdin);
-        fprintf(stderr,"requete: %s",requete);
         requete[strcspn(requete, "\n")] = 0; // remove trailing newline (if any)
         echolen = strlen(requete);
         if (send(sock, requete, echolen, 0) != echolen) {
@@ -75,7 +74,6 @@ int main(int argc, char *argv[]) {
         fprintf(stdout,"%s", buffer);
         fprintf(stdout, "\n");
         if (!strcmp(requete,"exit")) break;
-        if (!strcmp(requete,"quit")) break;
     }
     close(sock);
     exit(EXIT_SUCCESS);

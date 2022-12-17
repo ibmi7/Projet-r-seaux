@@ -9,6 +9,7 @@
 #include <string.h>
 #include "client.h"
 #include <time.h>
+#include <pthread.h>
 #define MAXPENDING 5    /* Max connection requests */
 #define BUFFSIZE 1000
 
@@ -369,19 +370,8 @@ int main(int argc, char *argv[]) {
     if (bind(serversock, (struct sockaddr *) &echoserver, sizeof(echoserver)) < 0) {
         Die("Failed to bind the server socket");
     }
-    /* Listen on the server socket */
-    /*if (listen(serversock, MAXPENDING) < 0) {
-    Die("Failed to listen on server socket");
-    }*/
-/* Run until cancelled */
+    i = 0;
     while (1) {
-        //unsigned int clientlen = sizeof(echoclient);
-        /* Wait for client connection */
-        /*if ((clientsock = accept(serversock, (struct sockaddr *) &echoclient, &clientlen)) < 0) {
-        Die("Failed to accept client connection");
-        }
-        fprintf(stdout, "Client connected: %s\n",
-                        inet_ntoa(echoclient.sin_addr));*/
         char buffer[50];
         int received = -1;
         socklen_t client_struct_length = sizeof(echoclient);

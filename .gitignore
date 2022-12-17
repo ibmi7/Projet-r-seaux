@@ -4,9 +4,10 @@ udp_serveur
 udp_client
 tcp_serveur_fork
 tcp_serveur_thread
+udp_serveur_thread
 # Ignore everything in the .vscode directory
 .vscode/
-
+.vs/
 # Ignore executables
 *.exe
 *.out

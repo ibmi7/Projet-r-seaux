@@ -9,19 +9,22 @@
 #include <string.h>
 #include "client.h"
 #include <time.h>
-#define MAXPENDING 5    /* Max connection requests */
+#include <pthread.h>
+#define MAXPENDING 10    /* Max connection requests */
 #define BUFFSIZE 1000
 
 int serversock, clientsock;
 int nb_clients = 0;
-
+pthread_t tid;
+pthread_t serverthreads[100];
 void Die(char *mess) { perror(mess); exit(EXIT_FAILURE); }
 
 Client liste_clients[100];
 struct sockaddr_in echoserver, echoclient;
 time_t rawtime;
 char * temps;
-void HandleClient(int sock) {
+void*HandleClient(void* param) {
+    int sock = *((int*)param);
     char buffer[50];
     int received = -1;
     /* Receive message */
@@ -41,11 +44,11 @@ void HandleClient(int sock) {
         requete = strtok(buffer, " \t");
         if (!strcmp("exit", requete)) {
             if (send(sock, "GOODBYE", 8, 0) != 8) {
-                Die("Failed to send bytes to client");
+                Die("Failed to send bytes to client\n");
             }
             fprintf(stdout, "Client disconnected: %s\n",inet_ntoa(echoclient.sin_addr));
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");
                 break;
             }
             break;
@@ -58,10 +61,10 @@ void HandleClient(int sock) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");
                 break;
             }
-            //fprintf(stderr,"Identifiant invalide.");
+            fprintf(stderr,"Identifiant invalide.\n");
             continue;
         }
 
@@ -70,22 +73,24 @@ void HandleClient(int sock) {
         if (temp) compte = strtol(temp, NULL, 10);
         else {
             if (send(sock, "KO", 3, 0) != 3) {
-                Die("Failed to send bytes to client");
+                Die("Failed to send bytes to client\n");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");
                 break;
             }
-            fprintf(stderr,"Numéro de compte invalide.");
+            fprintf(stderr,"Numéro de compte invalide.\n");
             continue;
         }
+        
         if (compte<0) {
             fprintf(stderr, "compte\n");
             if (send(sock, "KO", 3, 0) != 3) {
-                Die("Failed to send bytes to client");
+                Die("Failed to send bytes to client\n");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");
+                break;
             }
             fprintf(stderr,"Num�ro de compte invalide.");
             continue;
@@ -96,13 +101,13 @@ void HandleClient(int sock) {
         if (!password) {
             fprintf(stderr, "compte\n");
             if (send(sock, "KO", 3, 0) != 3) {
-                Die("Failed to send bytes to client");
+                Die("Failed to send bytes to client\n");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");
                 break;
             }
-            fprintf(stderr,"Mot de passe invalide.");
+            fprintf(stderr,"Mot de passe invalide.\n");
             continue;
         }
 
@@ -111,20 +116,20 @@ void HandleClient(int sock) {
         while (i < nb_clients && strcmp(liste_clients[i].id_client, client)) i++;
         if (i >= nb_clients) {
             if (send(sock, "KO", 3, 0) != 3) {
-                Die("Failed to send bytes to client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                Die("Failed to receive additional bytes from client");
+                Die("Failed to receive additional bytes from client\n");
             }
             continue;
         }
         //on v�rifie que le mdp correspond bien
         if (strcmp(liste_clients[i].password, password)) {
             if (send(sock, "KO", 3, 0) != 3) {
-                Die("Failed to send bytes to client");
+                Die("Failed to send bytes to client\n");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");
                 break;
             }
             continue;
@@ -140,10 +145,10 @@ void HandleClient(int sock) {
             if (temp) somme = strtol(temp, &pend, 10);
             else {
                 if (send(sock, "KO", 3, 0) != 3) {
-                    Die("Failed to send bytes to client");
+                    Die("Failed to send bytes to client\n");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                    //Die("Failed to receive additional bytes from client");
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");
                     break;
                 }
                 continue;
@@ -151,13 +156,13 @@ void HandleClient(int sock) {
             if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant += somme;
             else{
                 if (send(sock, "KO", 3, 0) != 3) {
-                    Die("Failed to send bytes to client");
+                    Die("Failed to send bytes to client\n");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                    //Die("Failed to receive additional bytes from client");
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");
                     break;
                 }
-                fprintf(stderr,"Num�ro de compte invalide.");
+                fprintf(stderr,"Num�ro de compte invalide.\n");
                 continue;
             }
 
@@ -167,6 +172,13 @@ void HandleClient(int sock) {
             FILE* liste_op = fopen(nom_fichier, "a");
             if (liste_op == NULL) {
                 fprintf(stderr, "Impossible d'ouvrir le fichier liste_operations.txt");
+                if (send(sock, "KO", 3, 0) != 3) {
+                    Die("Failed to send bytes to client\n");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");
+                    break;
+                }
                 break;
             }
             fprintf(liste_op, "%d;AJOUT;%d;%s", compte, somme,temps);
@@ -175,9 +187,17 @@ void HandleClient(int sock) {
             //on met � jour le fichier bdd_clients.csv
             FILE* fichier = fopen("bdd_clients.csv", "w");
             if (fichier == NULL) {
-                fprintf(stderr, "Impossible d'ouvrir le fichier bdd_clients.csv");
+                fprintf(stderr, "Impossible d'ouvrir le fichier bdd_clients.csv\n");
+                if (send(sock, "KO", 3, 0) != 3) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");
+                    break;
+                }
                 break;
             }
+
             fprintf(fichier, "id_client;password;nb_comptes;solde\n");
             for (int j = 0; j < nb_clients; j++) {
                 fprintf(fichier, "%s;%s;%d;", liste_clients[j].id_client, liste_clients[j].password, liste_clients[j].nb_compte);
@@ -190,10 +210,10 @@ void HandleClient(int sock) {
         
             //on envoie un message de confirmation
             if (send(sock, "OK", 3, 0) != 3) {
-                Die("Failed to send bytes to client");
+                Die("Failed to send bytes to client\n");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");
                 break;
             }
         }
@@ -206,10 +226,10 @@ void HandleClient(int sock) {
             if (temp) somme = strtol(temp, &pend, 10);
             else {
                 if (send(sock, "KO", 3, 0) != 3) {
-                    Die("Failed to send bytes to client");
+                    Die("Failed to send bytes to client\n");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                    //Die("Failed to receive additional bytes from client");
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");
                     break;
                 }
                 continue;
@@ -217,10 +237,10 @@ void HandleClient(int sock) {
             if (compte<liste_clients[i].nb_compte) liste_clients[i].compte[compte].montant -= somme;
             else{
                 if (send(sock, "KO", 3, 0) != 3) {
-                    Die("Failed to send bytes to client");
+                    Die("Failed to send bytes to client\n");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                    //Die("Failed to receive additional bytes from client");
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");
                     break;
                 }
                 fprintf(stderr,"Num�ro de compte invalide.");
@@ -233,6 +253,13 @@ void HandleClient(int sock) {
             FILE* liste_op = fopen(nom_fichier, "a");
             if (liste_op == NULL) {
                 fprintf(stderr, "Impossible d'ouvrir le fichier liste_operations.txt");
+                if (send(sock, "OK", 3, 0) != 3) {
+                Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");
+                    break;
+                }
                 break;
             }
             fprintf(liste_op, "%d;RETRAIT;%d;%s", compte, somme,temps);
@@ -242,6 +269,13 @@ void HandleClient(int sock) {
             FILE* fichier = fopen("bdd_clients.csv", "w");
             if (fichier == NULL) {
                 fprintf(stderr, "Impossible d'ouvrir le fichier bdd_clients.csv");
+                if (send(sock, "OK", 3, 0) != 3) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");
+                    break;
+                }
                 break;
             }
             fprintf(fichier, "id_client;password;nb_comptes;solde\n");
@@ -256,10 +290,10 @@ void HandleClient(int sock) {
         
             //on envoie un message de confirmation
             if (send(sock, "OK", 3, 0) != 3) {
-                Die("Failed to send bytes to client");
+                Die("Failed to send bytes to client\n");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");
                 break;
             }
         }
@@ -269,15 +303,16 @@ void HandleClient(int sock) {
             char solde[200];
             if (compte>=liste_clients[i].nb_compte){
                 if (send(sock, "KO", 3, 0) != 3) {
-                    Die("Failed to send bytes to client");
+                    Die("Failed to send bytes to client\n");
                 }
                 if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                    //Die("Failed to receive additional bytes from client");
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");
                     break;
                 }
-                fprintf(stderr,"Num�ro de compte invalide.");
+                fprintf(stderr,"Num�ro de compte invalide.\n");
                 break;
             }
+
             //on lit dans le fichier la dernière opération
             char* line = NULL;
             size_t len = 0;
@@ -287,6 +322,13 @@ void HandleClient(int sock) {
             FILE* liste_op = fopen(nom_fichier, "r");
             if (liste_op == NULL) {
                 fprintf(stderr, "Impossible d'ouvrir le fichier liste_operations.txt");
+                if (send(sock, "KO", 3, 0) != 3) {
+                    Die("Failed to send bytes to client\n");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");
+                    break;
+                }
                 break;
             }
             while ((getline(&line, &len, liste_op)) != -1) {
@@ -304,7 +346,7 @@ void HandleClient(int sock) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");
                 break;
             }
         }
@@ -321,6 +363,13 @@ void HandleClient(int sock) {
             FILE* liste_op = fopen(nom_fichier, "r");
             if (liste_op == NULL) {
                 fprintf(stderr, "Impossible d'ouvrir le fichier liste_operations.txt");
+                if (send(sock, "KO", 3, 0) != 3) {
+                    Die("Failed to send bytes to client");
+                }
+                if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
+                    fprintf(stderr,"Failed to receive additional bytes from client\n");   
+                    break;
+                }
                 break;
             }
             while ((getline(&line, &len, liste_op)) != -1) {
@@ -345,7 +394,7 @@ void HandleClient(int sock) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");   
                 break;
             }
         }
@@ -354,13 +403,14 @@ void HandleClient(int sock) {
                 Die("Failed to send bytes to client");
             }
             if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {
-                //Die("Failed to receive additional bytes from client");
+                fprintf(stderr,"Failed to receive additional bytes from client\n");   
                 break;
             }
-            fprintf(stderr,"Requ�te invalide.");
+            fprintf(stderr,"Requ�te invalide.\n");
         }
     }
     close(sock);
+    return NULL;
 }
 
 void INThandler(int sig) {
@@ -443,10 +493,12 @@ int main(int argc, char *argv[]) {
     if (listen(serversock, MAXPENDING) < 0) {
         Die("Failed to listen on server socket");
     }
+    pthread_t tid[100];
+    i = 0;
 /* Run until cancelled */
     while (1) {
-        // http://www.tutorialspoint.com/unix_sockets/socket_server_example.htm
-        // https://stackoverflow.com/questions/13669474/multiclient-server-using-fork
+        // https://www.geeksforgeeks.org/handling-multiple-clients-on-server-with-multithreading-using-socket-programming-in-c-cpp/
+
         unsigned int clientlen = sizeof(echoclient);
         /* Wait for client connection */
         if ((clientsock = accept(serversock, (struct sockaddr *) &echoclient, &clientlen)) < 0) {
@@ -454,6 +506,17 @@ int main(int argc, char *argv[]) {
         }
         fprintf(stdout, "Client connected: %s\n",
                         inet_ntoa(echoclient.sin_addr));
-        HandleClient(clientsock);
+        if (pthread_create(&tid[i], NULL, &HandleClient, (void *) &clientsock) != 0) {
+            Die("Failed to create thread\n");
+        }
+        i++;
+
+        if (i>=MAXPENDING){
+            i = 0;
+            while (i < MAXPENDING) {
+                pthread_join(tid[i++], NULL);
+            }
+            i = 0;
+        }
     }
 }
