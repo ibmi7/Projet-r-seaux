@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "USAGE: TCPecho <server_ip> <word> <port>\n");
         exit(EXIT_FAILURE);
     }
-    /* Create the TCP socket */
+    /* Create the UDP socket */
     if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
         Die("Failed to create socket");
     }

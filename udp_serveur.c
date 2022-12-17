@@ -23,7 +23,7 @@ char * temps;
 
 void Die(char *mess) { perror(mess); exit(EXIT_FAILURE); }
 
-Client liste_clients[2];
+Client liste_clients[1000];
 
 void HandleClient(char* buffer) {
 

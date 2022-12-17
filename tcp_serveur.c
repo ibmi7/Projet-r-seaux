@@ -19,7 +19,7 @@ pthread_t tid;
 pthread_t serverthreads[100];
 void Die(char *mess) { perror(mess); exit(EXIT_FAILURE); }
 
-Client liste_clients[100];
+Client liste_clients[1100];
 struct sockaddr_in echoserver, echoclient;
 time_t rawtime;
 char * temps;
@@ -435,25 +435,25 @@ int main(int argc, char *argv[]) {
         fprintf(bdd_clients, "id_client,password,nb_comptes,solde");
     }
     else {
-        getline(&line, &len, bdd_clients);
-        while (getline(&line, &len, bdd_clients) != -1){
-            if (!strcmp(line,"\n")) break;
-            char* client = strtok(line, "  , ; \n");
-            if (!client) continue;
-            char* password = strtok(NULL, "  , ; \n");
+        getline(&line, &len, bdd_clients); //on saute la ligne d'ent�te
+        while (getline(&line, &len, bdd_clients) != -1){ 
+            if (!strcmp(line,"\n")) break; 
+            char* client = strtok(line, "  , ; \n"); 
+            if (!client) continue; 
+            char* password = strtok(NULL, "  , ; \n"); 
             if (!password) continue;
-            liste_clients[i].id_client = (char*) malloc(strlen(client) + 1);
-            liste_clients[i].password = (char*) malloc(strlen(password) + 1);
-            if (client) strcpy(liste_clients[i].id_client,client);
+            liste_clients[i].id_client = (char*) malloc(strlen(client) + 1); 
+            liste_clients[i].password = (char*) malloc(strlen(password) + 1); 
+            if (client) strcpy(liste_clients[i].id_client,client); 
             if (password) strcpy(liste_clients[i].password,password);
-            int nb_compte = strtol(strtok(NULL, "  , ; \n"), NULL, 10);
-            if (!nb_compte) continue;
-            liste_clients[i].compte = (Compte*) malloc(nb_compte);
-            liste_clients[i].nb_compte = nb_compte;
-            for (int j = 0; j < nb_compte; j++) {
-                char * p = strtok(NULL, "  { , } ; \n");
-                if (p) liste_clients[i].compte[j].montant = strtol(p, NULL, 10);
-                else liste_clients[i].compte[j].montant = 0;
+            int nb_compte = strtol(strtok(NULL, "  , ; \n"), NULL, 10); 
+            if (!nb_compte) continue; 
+            liste_clients[i].compte = (Compte*) malloc(nb_compte); 
+            liste_clients[i].nb_compte = nb_compte; 
+            for (int j = 0; j < nb_compte; j++) { 
+                char * p = strtok(NULL, "  { , } ; \n"); 
+                if (p) liste_clients[i].compte[j].montant = strtol(p, NULL, 10); 
+                else liste_clients[i].compte[j].montant = 0; 
             }
             char nom_fichier[100];
             sprintf(nom_fichier, "OperationsClients/liste_operations_%s.txt", client);
@@ -463,11 +463,7 @@ int main(int argc, char *argv[]) {
             }
             i++;
             nb_clients++;
-        }
-        for (int i = 0;i<nb_clients;i++){
-            printf("id : %s  mdp : %s\t",liste_clients[i].id_client,liste_clients[i].password);
-            for (int j = 0;j<liste_clients[i].nb_compte;j++) printf("%d ",liste_clients[i].compte[j].montant);
-            printf("\n");
+            fprintf(stderr, "Client %s ajout�\n", client);
         }
     }
     fclose(bdd_clients);
