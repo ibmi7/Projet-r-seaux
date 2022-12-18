@@ -82,7 +82,7 @@ Ou utilisez le Makefile fournit avec le projet, en tapant la commande make ou ma
 
 Pour exécuter le programme, utilisez la commande suivante :
 
-./client [server_ip] [word] [port]
+./tcp_client [server_ip] [word] [port]
 
 Où server_ip est l'adresse IP du serveur auquel vous souhaitez vous connecter, word est la requête que vous souhaitez envoyer au serveur et port est le numéro de port sur lequel le serveur écoute les connexions.
 
