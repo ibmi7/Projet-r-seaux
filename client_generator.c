@@ -28,7 +28,10 @@ int main(int argc, char const *argv[])
     fichier = fopen("bdd_clients_generated.csv", "w");
     fprintf(fichier,"id_client;password;nb_comptes;solde\n");
     int i;
-    for (i = 0; i < 1000; ++i)
+    int nb_clients;
+    if (argc != 2) nb_clients = 1000;
+    else nb_clients = atoi(argv[1]);
+    for (i = 0; i < nb_clients; ++i)
     {
         int nb_comptes = rand()%(6)+1;
         fprintf(fichier,"%s;%s;%d;",random_string(rand()%(6)+5),random_string(rand()%(9)+8),nb_comptes);

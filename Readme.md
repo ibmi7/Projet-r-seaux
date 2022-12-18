@@ -108,6 +108,13 @@ En localhost, pour ajouter 500€ dans le compte n°3 du client ibrahim, en TCP,
     - le client peut continuer à envoyer des requêtes de la forme suivante : [REQUETE] [id_client] [n_compte] [password] [montant]
 En UDP, il suffit de remplacer "tcp_serveur" par "udp_serveur", et "tcp_client" par "udp_client".
 
+# Fichiers supplémentaires
+
+Le fichier client_generator.c a pour but de générer des fichiers de données de clients, de comptes et d'opérations. Il est utilisé pour générer les fichiers de données utilisés par le serveur. Les données générées sont stockées dans
+le fichier bdd_clients_generated.csv.
+Pour compiler le programme, utilisez la commande suivante : gcc client_generator.c -o generator, ou utilisez le Makefile fournit avec le projet, en tapant la commande make generator.
+Pour exécuter le programme, utilisez la commande suivante : ./generator [nombre de clients] (par défaut, le nombre de clients est 1000).
+
 # Auteur
 
 Ce programme a été écrit par Ibrahim Minthe et Youssef Skhiri.

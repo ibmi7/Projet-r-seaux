@@ -341,6 +341,10 @@ void*HandleClient(void* param) {
                 }
             }
             fclose(liste_op);
+            if (!date){
+                date = malloc(30 * sizeof(char));
+                strcpy(date, "Aucune opération effectuée");
+            }
             sprintf(solde, "RES_SOLDE %d %s",liste_clients[i].compte[compte].montant, date);
             if (send(sock, solde, 200, 0) != 200) {
                 Die("Failed to send bytes to client");
@@ -357,6 +361,7 @@ void*HandleClient(void* param) {
             int count = 0;
             size_t len = 0;
             char* operation[10];
+            memset(message, 0, BUFFSIZE);
             sprintf(message, "RES_OPERATIONS\n");
             char nom_fichier[100];
             sprintf(nom_fichier, "OperationsClients/liste_operations_%s.txt", liste_clients[i].id_client);
@@ -423,6 +428,12 @@ void INThandler(int sig) {
     signal(sig, SIG_IGN);
     if (serversock) close(serversock);
     if (clientsock) close(clientsock);
+    // destruction des clients
+    for (int i = 0; i < nb_clients; i++) {
+        free(liste_clients[i].id_client);
+        free(liste_clients[i].password);
+        free(liste_clients[i].compte);
+    }
     printf("\nGoodbye\n");
     exit(0);
 }

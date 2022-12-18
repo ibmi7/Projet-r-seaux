@@ -233,6 +233,10 @@ void HandleClient(char* buffer) {
             }
         }
         fclose(liste_op);
+        if (!date){
+            date = malloc(30 * sizeof(char));
+            strcpy(date, "Aucune opération effectuée");
+        }
         sprintf(solde, "RES_SOLDE %d %s",liste_clients[i].compte[compte].montant, date);
         if (sendto(serversock,solde,200,0,(struct sockaddr*)&echoclient,sizeof(echoclient))<0) {
             Die("Failed to send bytes to client");
