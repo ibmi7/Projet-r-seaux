@@ -378,11 +378,17 @@ void*HandleClient(void* param) {
                         for (int j = 0; j < 9; j++) {
                             operation[j] = malloc(sizeof(char) * strlen(operation[j + 1]));
                             strcpy(operation[j], operation[j + 1]);
+                            while (strcspn(operation[j], ";") != strlen(operation[j])) {
+                                operation[j][strcspn(operation[j], ";")] = ' ';
+                            }
                         }
                         count = 9;
                     }
                     operation[count] = malloc(sizeof(char) * strlen(line));
                     strcpy(operation[count], line);
+                    while (strcspn(operation[count], ";") != strlen(operation[count])) {
+                        operation[count][strcspn(operation[count], ";")] = ' ';
+                    }
                     count++;
                 }
             }
