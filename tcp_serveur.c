@@ -469,11 +469,12 @@ int main(int argc, char *argv[]) {
             }
             i++;
             nb_clients++;
-            fprintf(stderr, "Client %s ajout�\n", client);
         }
     }
     fclose(bdd_clients);
-
+    fprintf(stdout,"Clients initialisés\n");
+    fprintf(stdout,"Il y a %d clients dans la banque.\n", nb_clients);
+    fprintf(stdout,"Serveur lancé\n");
     if (argc != 2) {
         fprintf(stderr, "USAGE: echoserver <port>\n");
         exit(EXIT_FAILURE);

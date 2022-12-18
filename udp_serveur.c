@@ -260,11 +260,17 @@ void HandleClient(char* buffer) {
                     for (int j = 0; j < 9; j++) {
                         operation[j] = malloc(sizeof(char) * strlen(operation[j + 1]));
                         strcpy(operation[j], operation[j + 1]);
+                        while (strcspn(operation[j], ";") != strlen(operation[j])) {
+                            operation[j][strcspn(operation[j], ";")] = ' ';
+                        }
                     }
                     count = 9;
                 }
                 operation[count] = malloc(sizeof(char) * strlen(line));
                 strcpy(operation[count], line);
+                while (strcspn(operation[count], ";") != strlen(operation[count])) {
+                    operation[count][strcspn(operation[count], ";")] = ' ';
+                }
                 count++;
             }
         }
@@ -345,14 +351,11 @@ int main(int argc, char *argv[]) {
             i++;
             nb_clients++;
         }
-        for (int i = 0;i<nb_clients;i++){
-            printf("id : %s  mdp : %s\t",liste_clients[i].id_client,liste_clients[i].password);
-            for (int j = 0;j<liste_clients[i].nb_compte;j++) printf("%d ",liste_clients[i].compte[j].montant);
-            printf("\n");
-        }
     }
     fclose(bdd_clients);
-
+    fprintf(stdout,"Clients initialisés\n");
+    fprintf(stdout,"Il y a %d clients dans la banque.\n", nb_clients);
+    fprintf(stdout,"Serveur lancé\n");
     if (argc != 2) {
         fprintf(stderr, "USAGE: echoserver <port>\n");
         exit(EXIT_FAILURE);
